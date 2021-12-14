@@ -80,9 +80,10 @@ int main()
 
   double dum[3] = {1.0, 1.0, 1.0};
   char   size[16];
-
+  void * mallocing_space ;
   FILE *fp;
 
+  mallocing_space = malloc(1000);
   if ((fp = fopen("timer.flag", "r")) == NULL) {
     timers_enabled = false;
   } else {
