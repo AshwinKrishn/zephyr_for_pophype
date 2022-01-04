@@ -52,6 +52,10 @@
 #include "randdp.h"
 #include "timers.h"
 #include "print_results.h"
+#include "device.h"
+#include <zephyr/types.h>
+
+#include <drivers/virtualization/ivshmem.h>
 
 #define MAX(X,Y)  (((X) > (Y)) ? (X) : (Y))
 
@@ -82,7 +86,8 @@ int main()
   char   size[16];
   void * mallocing_space ;
   FILE *fp;
-
+  char arr[] = "Ashwin";
+  struct device * ivshmem_device; 
   mallocing_space = malloc(1000);
   if ((fp = fopen("timer.flag", "r")) == NULL) {
     timers_enabled = false;
@@ -281,6 +286,17 @@ int main()
     tt = timer_read(2);
     printf("Random numbers: %9.3lf (%6.2lf)\n", tt, tt*100.0/tm);
   }
+ printf("We are printing the contents of first 100 bytes of svshmem:\n");
+ ivshmem_device = device_get_binding("ivshmem");
+ void * shm_addr ;
+ struct ivshmem_driver_api * shmem_api = ((struct ivshmem_driver_api *)ivshmem_device->api); 
+ uint64_t sizeof_shrmem = shmem_api->get_mem(ivshmem_device,shm_addr); 
+ for(int i = 0 ; i < 100 ; i++)
+ {
+//	printf("%c",((char*)0x80000000 + i));
+ }
+
+ // memcpy(0x80000000,arr,strlen(arr));
 
   return 0;
 }
