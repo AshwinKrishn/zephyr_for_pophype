@@ -14,11 +14,16 @@ void main()
         int ret;
 
 	void * shared_mem_linker = (void *)0x40000000; 
-//	*(uint8_t *)shared_mem_linker = 0xFF;
+	*(uint8_t *)shared_mem_linker = 0xFF;
 	for(int i = 0 ; i < 10 ; i++)
 	{
-		printf("Contents are : ");
-		printf("Quad content %d is %x\n",i , *((uint8_t *)shared_mem_linker + i)  ) ;
+		printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
+	}
+	shared_mem_linker = (void *)0x50000000; 
+	*(uint8_t *)shared_mem_linker = 0xF5;
+	for(int i = 0 ; i < 10 ; i++)
+	{
+		printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
 	}
 
         ivshmem = device_get_binding(CONFIG_IVSHMEM_DEV_NAME);
