@@ -13,6 +13,14 @@ void main()
         uint16_t vectors;
         int ret;
 
+	void * shared_mem_linker = (void *)0x40000000; 
+//	*(uint8_t *)shared_mem_linker = 0xFF;
+	for(int i = 0 ; i < 10 ; i++)
+	{
+		printf("Contents are : ");
+		printf("Quad content %d is %x\n",i , *((uint8_t *)shared_mem_linker + i)  ) ;
+	}
+
         ivshmem = device_get_binding(CONFIG_IVSHMEM_DEV_NAME);
         if(ivshmem == NULL){
 		printf( "Could not get ivshmem device");
