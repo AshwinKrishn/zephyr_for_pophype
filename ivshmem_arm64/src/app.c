@@ -12,8 +12,19 @@ void main()
         uint32_t *area_to_rw;
         uint16_t vectors;
         int ret;
-
-        ivshmem = device_get_binding(CONFIG_IVSHMEM_DEV_NAME);
+	void * shared_mem_linker = (void *)0x80000000;
+       // *(uint8_t *)shared_mem_linker = 0xFF;
+        for(int i = 0 ; i < 10 ; i++)
+        {
+                printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
+        }
+        shared_mem_linker = (void *)0x90000000;
+        *(uint8_t *)shared_mem_linker = 0xF5;
+        for(int i = 0 ; i < 10 ; i++)
+        {
+                printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
+        }
+/*        ivshmem = device_get_binding(CONFIG_IVSHMEM_DEV_NAME);
         if(ivshmem == NULL){
 		printf( "Could not get ivshmem device");
 		return;
@@ -29,24 +40,24 @@ void main()
 		return;
 	}
         id = ivshmem_get_id(ivshmem);
-        if(id != 0) {
+*/        if(id != 0) {
 //		printf( "ID should be 0 on ivshmem-plain");
 //		return;
 	}
-        area_to_rw = (uint32_t *)mem;
+/*        area_to_rw = (uint32_t *)mem;
 	printf("printing first 10 words\n");
 	for(int i = 0 ; i < 10 ; i++)
 	{
 		printf("%c\n",*((char *)area_to_rw + i));
 	}
 	memcpy(area_to_rw,"Ashwin",6);
-/*        if(*area_to_rw != 8108)
+*/ /*        if(*area_to_rw != 8108)
 	{
                 printf("Could not r/w to the shared memory");
 		return;
 	}
 */
-	printf("Successfully wrote and read back in memory");
+//	printf("Successfully wrote and read back in memory");
         /* Quickly verifying that non-plain features return proper code */
 /*        vectors = ivshmem_get_vectors(ivshmem);
         zassert_equal(vectors, 0, "ivshmem-plain cannot have vectors");

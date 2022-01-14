@@ -25,8 +25,22 @@ void main()
 	{
 		printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
 	}
-
-        ivshmem = device_get_binding(CONFIG_IVSHMEM_DEV_NAME);
+	uint32_t time_stamp;
+	uint32_t milliseconds_spent;
+	while(1)
+	{
+		shared_mem_linker = (void *)0x40000000;
+		for(int j = 0 ; j < 255 ; j++)
+		{
+			uint32_t flag = 0;
+			printf("outer loop time stamp is %d\n",time_stamp);
+			for(int i = 0 ; i < 255 ; i++)
+			{
+				*((uint8_t *)shared_mem_linker + i) = 0xed ; 
+			}
+		}
+	}
+  /*      ivshmem = device_get_binding(CONFIG_IVSHMEM_DEV_NAME);
         if(ivshmem == NULL){
 		printf( "Could not get ivshmem device");
 		return;
@@ -43,8 +57,7 @@ void main()
 	}
         id = ivshmem_get_id(ivshmem);
         if(id != 0) {
-//		printf( "ID should be 0 on ivshmem-plain");
-//		return;
+		printf( "ID should be 0 on ivshmem-plain");
 	}
         area_to_rw = (uint32_t *)mem;
 	printf("printing first 10 words\n");
@@ -53,7 +66,7 @@ void main()
 		printf("%c\n",*((char *)area_to_rw + i));
 	}
 	memcpy(area_to_rw,"Ashwin",6);
-/*        if(*area_to_rw != 8108)
+*//*        if(*area_to_rw != 8108)
 	{
                 printf("Could not r/w to the shared memory");
 		return;
