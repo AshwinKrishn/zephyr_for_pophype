@@ -2,44 +2,79 @@
 #include <drivers/virtualization/ivshmem.h>
 #include <stdio.h>
 
+struct shared_area
+{
+	void * write_area;
+	void * read_area;
+};
+
+struct handshake
+{
+	char present;
+	char arch[10];
+};
 void main()
 {
-	printf("Ashwin app here\n");
-	const struct device *ivshmem;
-        uintptr_t mem;
-        size_t size;
-        uint32_t id;
-        uint32_t *area_to_rw;
-        uint16_t vectors;
-        int ret;
-
-	void * shared_mem_linker = (void *)0x40000000; 
-	*(uint8_t *)shared_mem_linker = 0xFF;
-	for(int i = 0 ; i < 10 ; i++)
-	{
-		printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
-	}
-	shared_mem_linker = (void *)0x50000000; 
-	*(uint8_t *)shared_mem_linker = 0xF5;
-	for(int i = 0 ; i < 10 ; i++)
-	{
-		printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
-	}
-	uint32_t time_stamp;
-	uint32_t milliseconds_spent;
+	printf("x86 app here\n");
+	struct shared_area rw_buf = {
+		.write_area = (void*)0x50000000,
+		.read_area  = (void*)0x5f000000
+	};
+	struct handshake hnsk = {
+		.present = 0x1F,
+	};	
+	char already_present;
+	memcpy(hnsk.arch, "x86",4);
+	struct handshadahkes		
+	printing("Attempting connection with other core ::\n");	
+	memcpy(rw_buf.write_area,hnsk,sizeof(struct shared_area));
+	
 	while(1)
 	{
-		shared_mem_linker = (void *)0x40000000;
-		for(int j = 0 ; j < 255 ; j++)
+		if()
+		struct handshake * other = (struct handshake*)rw_buf.read_area;
+		if(other->present = 0x1F)
 		{
-			uint32_t flag = 0;
-			printf("outer loop time stamp is %d\n",time_stamp);
-			for(int i = 0 ; i < 255 ; i++)
-			{
-				*((uint8_t *)shared_mem_linker + i) = 0xed ; 
-			}
+			printf("Other core of type %s conected ",other->arch);
 		}
 	}
+
+	
+/*	
+	uint32_t time_stamp;
+	uint32_t milliseconds_spent;
+	int it = 0x83;
+	int once = 1;
+	{
+		int to_write; 
+		void * open_area = (void*)0x100000000;
+		shared_mem_linker = (void *)0x50000000;
+		for(int i = 0 ; i < 255 ; i++)
+                {
+			*((char *) shared_mem_linker + i ) = it;	
+                }
+		memcpy(shared_mem_linker , "Ashwin", 6);
+		for(int i = 0 ; i < 255 ; i++)
+                {
+			*((char *) open_area + i ) = it +2;	
+                }
+		*((char*)shared_mem_linker ) = 'A' ;		
+*/
+/*		{
+			printf("Contents in 0x50000000 area is : \n");
+			for(int i = 0 ; i < 26 ; i++)
+                        {
+                                printf("%c ",*((char*)shared_mem_linker + i));
+                                if((i %25 == 0) && (i > 0))
+                                        printf("\n");
+                        }
+
+		}
+		}
+	}
+*/
+	printf("x86_kernel_exiting");
+	while(1);
   /*      ivshmem = device_get_binding(CONFIG_IVSHMEM_DEV_NAME);
         if(ivshmem == NULL){
 		printf( "Could not get ivshmem device");
