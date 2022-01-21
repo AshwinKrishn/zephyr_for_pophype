@@ -3,14 +3,14 @@
 #include <stdio.h>
 struct handshake
 {
-        char present;
+        uint32_t present;
         char arch[10];
 };
 struct shared_area
 {
         void * write_area;
         void * read_area;
-};
+}__attribute__((packed));
 void main()
 {
 	printf("arm64 app here and there\n");
@@ -18,45 +18,30 @@ void main()
                 .write_area = (void*)0x9f000000,
                 .read_area  = (void*)0x90000000
         };
+	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
 	struct handshake hnsk = {
-                .present = 0x1F,
-        }
+                .present = 0x1FF1F11F,
+        };
 	memcpy(hnsk.arch, "ARM",4);
-	printing("Attempting connection with other core ::\n");
-	while(1)
-	{
 	
-
-	}
-/*	for(int i = 0 ; i < 10 ; i++)
+	if(*((uint32_t*)rw_buf.read_area) == 0x1FF1F11F)
         {
-                printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
+                printf("Already other core x86  present in memory.\n");
+       		*((uint32_t*)rw_buf.write_area) =  0xE00E0EE0 ; 
         }
-        shared_mem_linker = (void *)0x9f000000;
-        for(int i = 0 ; i < 10 ; i++)
-        {
-                printf(" content at 0x%x is %x\n",(i + (uint8_t *)shared_mem_linker) , *((uint8_t *)shared_mem_linker + i)  ) ;
+	else{
+                printf("Attempting connection with other core ::\n");
+                while(1)
+                {
+                        struct handshake * other = (struct handshake*)rw_buf.read_area;
+       			*((uint32_t*)rw_buf.write_area) = 0xE00E0EE0 ; 
+                        if(*((uint32_t*)rw_buf.read_area) == 0x1FF1F11F)
+                        {
+                                printf("Other core of type x86 now conected \n");
+                        }
+                }
         }
-	int to_read = 1;
-	char first_char;
-	first_char = *((char*)0x90000000) ; 
-	while(1)
-	{
-		printf("Contents of 0x90000000 are : \n");
-		shared_mem_linker = (void *)0x90000000;
-		if(to_read == 1)
-		{
-			for(int i = 0 ; i < 255 ; i++)
-			{
-				printf("%c ",*((char*)shared_mem_linker + i));
-				if((i %25 == 0) && (i > 0))
-					printf("\n");
-			}
-		}
-		
-		break;
-	}	
-
-*/
-
+	printf("ARM_kernel_exiting");
+     	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
+	while(1);
 }
