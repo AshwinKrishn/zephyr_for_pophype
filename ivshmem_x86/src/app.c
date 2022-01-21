@@ -15,7 +15,7 @@ struct handshake
 };
 void main()
 {
-	printf("x86 app here\n");
+	printf("x86 kernel started\n");
 	struct shared_area rw_buf = {
 		.write_area = (void*)0x50000000,
 		.read_area  = (void*)0x5f000000
@@ -37,7 +37,6 @@ void main()
 		printf("Attempting connection with other core ::\n");	
 		//memcpy(rw_buf.write_area,hnsk,sizeof(struct shared_area));
 		*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ; 
-                printf("Content at %p is %x\n",(void*)(rw_buf.write_area ),*((uint32_t*)(rw_buf.write_area )));
 		while(1)
 		{
 			struct handshake * other = (struct handshake*)rw_buf.read_area;
@@ -45,6 +44,7 @@ void main()
 			if(other->present == 0xE00E0EE0)
 			{
 				printf("Other core of type ARM conected \n");
+				*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ;
 				break;
 			}
 		}
@@ -52,5 +52,6 @@ void main()
 		
 	printf("x86_kernel_exiting");
 	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
+	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
 	while(1);
 }

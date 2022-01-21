@@ -13,7 +13,7 @@ struct shared_area
 }__attribute__((packed));
 void main()
 {
-	printf("arm64 app here and there\n");
+	printf("arm64 app started\n");
 	struct shared_area rw_buf = {
                 .write_area = (void*)0x9f000000,
                 .read_area  = (void*)0x90000000
@@ -38,10 +38,12 @@ void main()
                         if(*((uint32_t*)rw_buf.read_area) == 0x1FF1F11F)
                         {
                                 printf("Other core of type x86 now conected \n");
-                        }
+                        	break;
+			}
                 }
         }
 	printf("ARM_kernel_exiting");
      	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
+     	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
 	while(1);
 }
