@@ -22,26 +22,25 @@ void main()
 	struct handshake hnsk = {
                 .present = 0xE00E0EE0,
         };
+	struct handshake in_hnsk;
 	memcpy(hnsk.arch, "ARM",4);
-	
-	if(*((uint32_t*)rw_buf.read_area) == 0x1FF1F11F)
+	memcpy((void*)&in_hnsk,rw_buf.read_area,sizeof(struct shared_area)); 	
+	if(in_hnsk.present  == 0x1FF1F11F)
         {
-                printf("Already other core x86  present in memory.\n");
-       		*((uint32_t*)rw_buf.write_area) =  0xE00E0EE0 ; 
-        }
+        	printf("Already other core %s present in memory.\n",in_hnsk.arch);
+		memcpy(rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
+	}
 	else{
                 printf("Attempting connection with other core ::\n");
                 while(1)
                 {
                         struct handshake * other = (struct handshake*)rw_buf.read_area;
-                       // if(*((uint32_t*)rw_buf.read_area) == 0x1FF1F11F)
                         memcpy((void*)rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
 			if(other->present == 0x1FF1F11F)
 			{
                                 printf("Other core of type x86 now conected \n");
                         	break;
 			}
-       			//*((uint32_t*)rw_buf.write_area) = 0xE00E0EE0 ; 
                 }
         }
      	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;

@@ -24,26 +24,24 @@ void main()
 	struct handshake hnsk = {
 		.present = 0x1FF1F11F,
 	};
+	struct handshake in_hnsk;
 	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
 	memcpy(hnsk.arch, "x86",4);
-	
-	if(*((uint32_t*)rw_buf.read_area) == 0xE00E0EE0)
+	memcpy((void*)&in_hnsk,rw_buf.read_area,sizeof(struct shared_area));	
+	if(in_hnsk.present == 0xE00E0EE0)
 	{
-		printf("Already other core ARM present in memory.\n");	
+		printf("Already other core %s present in memory.\n",in_hnsk.arch);	
 		memcpy(rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
-		//*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ;	
 	}	
 	else{
 		printf("Attempting connection with other core ::\n");	
-		//memcpy(rw_buf.write_area,hnsk,sizeof(struct shared_area));
-		*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ; 
+		memcpy(rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
 		while(1)
 		{
 			volatile struct handshake * other = (struct handshake*)rw_buf.read_area;
 			if(other->present == 0xE00E0EE0)
 			{
 				printf("Other core of type ARM conected \n");
-//				*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ;
 				memcpy((void*)rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
 				break;
 			}
