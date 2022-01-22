@@ -4,8 +4,8 @@
 
 struct shared_area
 {
-	void * write_area;
-	void * read_area;
+	volatile void * write_area;
+	volatile void * read_area;
 };
 
 struct handshake
@@ -16,11 +16,11 @@ struct handshake
 void main()
 {
 	printf("x86 kernel started\n");
-	struct shared_area rw_buf = {
+	volatile struct shared_area rw_buf = {
 		.write_area = (void*)0x50000000,
 		.read_area  = (void*)0x5f000000
 	};
-	*((uint32_t*)rw_buf.read_area) = 0x00454600 ;
+//	*((uint32_t*)rw_buf.read_area) = 0x00454600 ;
 	struct handshake hnsk = {
 		.present = 0x1FF1F11F,
 	};
@@ -35,15 +35,23 @@ void main()
 	}	
 	else{
 		printf("Attempting connection with other core ::\n");	
-		memcpy(rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
+		static uint64_t l = 0;
 		while(1)
 		{
 			volatile struct handshake * other = (struct handshake*)rw_buf.read_area;
 			if(other->present == 0xE00E0EE0)
 			{
-				printf("Other core of type ARM conected \n");
-				memcpy((void*)rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
+				printf("Other core of type %s conected \n",other->arch);
 				break;
+			}
+			else
+			{
+				if(l % 9000000 == 0)
+				{
+					printf("waiting for other core\n");
+					memcpy(rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
+				}
+				l++;
 			}
 		}
 	}
