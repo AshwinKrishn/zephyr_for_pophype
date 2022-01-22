@@ -10,7 +10,7 @@ struct shared_area
 {
         void * write_area;
         void * read_area;
-}__attribute__((packed));
+};
 void main()
 {
 	printf("arm64 app started\n");
@@ -20,7 +20,7 @@ void main()
         };
 	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
 	struct handshake hnsk = {
-                .present = 0x1FF1F11F,
+                .present = 0xE00E0EE0,
         };
 	memcpy(hnsk.arch, "ARM",4);
 	
@@ -34,16 +34,18 @@ void main()
                 while(1)
                 {
                         struct handshake * other = (struct handshake*)rw_buf.read_area;
-       			*((uint32_t*)rw_buf.write_area) = 0xE00E0EE0 ; 
-                        if(*((uint32_t*)rw_buf.read_area) == 0x1FF1F11F)
-                        {
+                       // if(*((uint32_t*)rw_buf.read_area) == 0x1FF1F11F)
+                        memcpy((void*)rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
+			if(other->present == 0x1FF1F11F)
+			{
                                 printf("Other core of type x86 now conected \n");
                         	break;
 			}
+       			//*((uint32_t*)rw_buf.write_area) = 0xE00E0EE0 ; 
                 }
         }
-	printf("ARM_kernel_exiting");
      	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
      	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
+	printf("ARM_kernel_exiting\n");
 	while(1);
 }

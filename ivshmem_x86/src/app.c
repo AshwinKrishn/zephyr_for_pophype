@@ -30,8 +30,8 @@ void main()
 	if(*((uint32_t*)rw_buf.read_area) == 0xE00E0EE0)
 	{
 		printf("Already other core ARM present in memory.\n");	
-		//memcpy(rw_buf.write_area,hnsk,sizeof(struct shared_area));
-		*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ;	
+		memcpy(rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
+		//*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ;	
 	}	
 	else{
 		printf("Attempting connection with other core ::\n");	
@@ -39,12 +39,12 @@ void main()
 		*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ; 
 		while(1)
 		{
-			struct handshake * other = (struct handshake*)rw_buf.read_area;
-			memcpy(rw_buf.write_area,hnsk,sizeof(struct shared_area));
+			volatile struct handshake * other = (struct handshake*)rw_buf.read_area;
 			if(other->present == 0xE00E0EE0)
 			{
 				printf("Other core of type ARM conected \n");
-				*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ;
+//				*((uint32_t*)rw_buf.write_area) = 0x1FF1F11F ;
+				memcpy((void*)rw_buf.write_area,(void*)&hnsk,sizeof(struct shared_area));
 				break;
 			}
 		}
