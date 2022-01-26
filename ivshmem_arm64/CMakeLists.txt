@@ -11,4 +11,6 @@ file(GLOB SRC_FILES
     "src/*.c"
 )
 
+
+#target_link_libraries(app PRIVATE openlibm_arm64)
 target_sources( app PRIVATE ${SRC_FILES})

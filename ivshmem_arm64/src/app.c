@@ -1,11 +1,23 @@
 #include <zephyr.h>
 #include <drivers/virtualization/ivshmem.h>
 #include <stdio.h>
+#include <pthread.h>
+
+
+#define STACKSIZ ((8192 *2) + CONFIG_TEST_EXTRA_STACKSIZE)
+
+K_THREAD_STACK_ARRAY_DEFINE(blasch_stacks, 1 , STACKSIZ);
+
+extern int bs_thread(void *tid_ptr);
+
+#define MAX_THREADS 128
+extern int _M4_threadsTableAllocated[MAX_THREADS];
 enum request_type{
         COMPUTE_VRANLC,
         COMPUTE_RANDLC,
         COMPUTE_LOG,
-	RESPOND_VRANLC
+	RESPOND_VRANLC,
+	BLACKSCHOLES_REQ
 
 };
 enum arg_type {
@@ -45,6 +57,8 @@ struct shared_area
       unsigned int exponent:11;        
       unsigned int sign:1;
     } tDoubleStruct;
+int tid;
+
 
 
 void vranlc( int n, double *x, double a, double y[] )
@@ -130,12 +144,14 @@ void main()
 			}
                 }
         }
+	blackscholes_main();
 	while(1)
 	{
 		struct offload_struct *  inp = (struct offload_struct *)rw_buf.read_area ;
 		if(inp->new_request == 0xF00F0FF0)
 		{
-			printf("A request of type %d came\n",COMPUTE_VRANLC);
+		   if(inp->type == COMPUTE_VRANLC)	{	
+			printf("A request of type COMPUTE_VRANLC came\n");
 			printf("Args are %d , %f , %f and %f\n", *inp->args[0].location,*(double*)inp->args[1].location,*(double*)inp->args[2].location,*(double*)inp->args[3].location);
 			vranlc(*(int*)inp->args[0].location,(double*)inp->args[1].location,*(double*)inp->args[2].location , (double*)inp->args[3].location);
 			printf("Post computation value of y is %f and value of x is %f\n",*((double*)inp->args[3].location), *((double*)inp->args[1].location));			
@@ -167,7 +183,7 @@ void main()
         		ofld_vranlc.args[3].location = (uint32_t*)((char*)write_pointer - 0x40000000)   ;
 
 
-        		ofld_vranlc.type = COMPUTE_VRANLC;
+        		ofld_vranlc.type = RESPOND_VRANLC;
         		ofld_vranlc.args[0].size = 1;
         		ofld_vranlc.args[0].type = INT;
         		ofld_vranlc.args[1].size = 1;
@@ -179,9 +195,52 @@ void main()
 
         		memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );				
 
-			break;	
-		}
+		   }
+		  else if(inp->type == BLACKSCHOLES_REQ)	{	
+			printf("A request of type BLACKSCHOLES_REQ came\n");
+			printf("Locations are %x , %x , %x and %x\n", (void*)inp->args[0].location);
+			printf("values needed only arg 4 %d\n",*(int*)inp->args[0].location);
+				
+			//do the work here
+			pthread_attr_t attr;
+			pthread_t threadid;
+			pthread_attr_init(&attr);
+			pthread_attr_setstack(&attr, &blasch_stacks[0], STACKSIZ);
+//			pthread_create(&threadid,&attr,(void *(*)(void *))bs_thread,(void *)inp->args[0].location);			
+			bs_thread((void *)inp->args[0].location);
+			
+			//indicate that you have consumed the message
+			*(uint32_t*)inp = ~(0xF00F0FF0);
+
+			//Start replying
+			struct offload_struct ofld_vranlc ;
+
+			ofld_vranlc.new_request = 0xF00F0FF0;
+			void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);
+			
+
+
+        		ofld_vranlc.type = COMPUTE_VRANLC;
+        		ofld_vranlc.args[0].size = 1;
+        		ofld_vranlc.args[0].type = INT;
+        		ofld_vranlc.args[1].size = 1;
+			ofld_vranlc.args[1].type = DOUBLE;
+        		ofld_vranlc.args[2].size = 1;
+        		ofld_vranlc.args[2].type = DOUBLE;
+        		ofld_vranlc.args[3].size = 1;
+        		ofld_vranlc.args[3].type = DOUBLE;
+
+        		memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );				
+		   }
+		  else if (inp->type == 0xDE)
+		  {
+			printf("x86 wants to go away , I am leaving too\n");
+			break;
+		  }
+	     }
 	}
+	tid = 1;
+	//bs_thread((void*)&tid);
 	printf("ARM_kernel_exiting\n");
      	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
      	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
