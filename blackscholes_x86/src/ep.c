@@ -250,7 +250,7 @@ int main()
 
   gettimeofday(&tv,(void *)0);
   printf("Seconds recorded is %d \n",tv.tv_sec);
-  
+  memset((void*)0x30000000, 'n' , 8196);  
   printf("x86_kernel_exiting\n");
         *((uint32_t*)rw_buf.read_area) = 0x00000000 ;
 //        *((uint32_t*)rw_buf.write_area) = 0x00000000 ;

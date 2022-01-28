@@ -1,0 +1,35 @@
+=== diff for manifest (zephyr):
+diff --git zephyr/arch/arm64/core/mmu.c zephyr/arch/arm64/core/mmu.c
+index 229efff6ae..b52bb47acf 100644
+--- zephyr/arch/arm64/core/mmu.c
++++ zephyr/arch/arm64/core/mmu.c
+@@ -669,6 +669,27 @@ static const struct arm_mmu_flat_range mmu_zephyr_ranges[] = {
+ 	  .end   = __rodata_region_end,
+ 	  .attrs = MT_NORMAL | MT_P_RO_U_RO | MT_DEFAULT_SECURE_STATE },
+ 
++	/* The write shared memory for zephyr. 	 
++	 * Note: read-write region is marked execute-never internally
++	 */
++	{ .name  = "write_shm_are",
++	  .start = (void *)0x70000000,
++	  .end   = (void *)0x70002000,
++	  .attrs = MT_NORMAL | MT_P_RW_U_NA  },
++	/* The read shared memory for zephyr. 	 
++	 * Note: read-write region is marked execute-never internally
++	 */
++	{ .name  = "read_shm_are",
++	  .start = (void *)0x7f000000,
++	  .end   = (void *)0x7f002000,
++	  .attrs = MT_NORMAL | MT_P_RW_U_NA },
++	/* The read shared memory for zephyr. 	 
++	 * Note: read-write region is marked execute-never internally
++	 */
++	{ .name  = "global_shm_area",
++	  .start = (void *)0x100000000,
++	  .end   = (void *)0x100002000,
++	  .attrs = MT_NORMAL | MT_P_RW_U_NA  },
+ #ifdef CONFIG_NOCACHE_MEMORY
+ 	/* Mark nocache segment noncachable, read-write and execute-never */
+ 	{ .name  = "nocache_data",
+
+Empty diff in 46 projects.
