@@ -1,0 +1,140 @@
+=== diff for manifest (zephyr):
+diff --git zephyr/arch/x86/core/memmap.c zephyr/arch/x86/core/memmap.c
+index 4e3882ea16..725f714c87 100644
+--- zephyr/arch/x86/core/memmap.c
++++ zephyr/arch/x86/core/memmap.c
+@@ -40,5 +40,15 @@ __weak struct x86_memmap_entry x86_memmap[CONFIG_X86_MEMMAP_ENTRIES] = {
+ 		DT_REG_ADDR(DT_CHOSEN(zephyr_sram)),
+ 		DT_REG_SIZE(DT_CHOSEN(zephyr_sram)),
+ 		X86_MEMMAP_ENTRY_RAM
++	},
++	{
++		0x40000000,
++		8192,
++		X86_MEMMAP_ENTRY_RAM
++	},
++	{
++		0x50000000,
++		8192,
++		X86_MEMMAP_ENTRY_RAM
+ 	}
+ };
+diff --git zephyr/arch/x86/gen_mmu.py zephyr/arch/x86/gen_mmu.py
+index 36783049fa..7a022ece82 100755
+--- zephyr/arch/x86/gen_mmu.py
++++ zephyr/arch/x86/gen_mmu.py
+@@ -231,7 +231,7 @@ class MMUTable():
+         """Get the index of the entry in this table that corresponds to the
+         provided virtual address"""
+         return (virt_addr >> self.addr_shift) & (self.num_entries - 1)
+-
++    
+     def has_entry(self, virt_addr):
+         """Indicate whether an entry is present in this table for the provided
+         virtual address"""
+@@ -415,7 +415,6 @@ class PtableSet():
+         """Map a virtual address to a physical address in the page tables,
+         with provided access flags"""
+         table = self.toplevel
+-
+         num_levels = len(self.levels) + level + 1
+ 
+         # Create and link up intermediate tables if necessary
+@@ -657,7 +656,7 @@ def map_extra_regions(pt):
+     """Map extra regions specified in command line"""
+     # Extract command line arguments
+     mappings = []
+-
++    debug("Mapping extra regions")
+     for entry in args.map:
+         elements = entry.split(',')
+ 
+@@ -751,6 +750,7 @@ def main():
+     sram_base = syms["CONFIG_SRAM_BASE_ADDRESS"]
+     sram_size = syms["CONFIG_SRAM_SIZE"] * 1024
+ 
++    debug("SRAM size and base is  0x %x and 0x %x"% (sram_size , sram_base))
+     mapped_kernel_base = syms["z_mapped_start"]
+     mapped_kernel_size = syms["z_mapped_size"]
+ 
+@@ -774,7 +774,7 @@ def main():
+ 
+     ptables_phys = syms["z_x86_pagetables_start"] + virt_to_phys_offset
+ 
+-    debug("Address space: 0x%x - 0x%x size 0x%x" %
++    print("Address space: 0x%x - 0x%x size 0x%x" %
+           (vm_base, vm_base + vm_size - 1, vm_size))
+ 
+     debug("Zephyr image: 0x%x - 0x%x size 0x%x" %
+@@ -802,10 +802,17 @@ def main():
+     pt = pclass(ptables_phys)
+     # Instantiate all the paging structures for the address space
+     pt.reserve(vm_base, vm_size)
++    pt.reserve(0x20000000,0x40000000)
++    pt.reserve(0x50000000,8192)
++    pt.reserve(0x5f000000,8192)
+     # Map the zephyr image
+     if is_generic_section_present:
+         map_flags = map_flags | FLAG_P
+         pt.map(image_base_phys, image_base, image_size, map_flags | ENTRY_RW)
++        pt.map(0x20000000 , 0x60000000,0x40000000,map_flags| ENTRY_RW)
++        pt.map(0x50000000 , 0x50000000,8192,map_flags| ENTRY_RW)
++        pt.map(0x5f000000 , 0x5f000000,8192,map_flags| ENTRY_RW)
++
+     else:
+         # When generic linker sections are not present in physical memory,
+         # the corresponding virtual pages should not be mapped to non-existent
+diff --git zephyr/drivers/virtualization/virt_ivshmem.c zephyr/drivers/virtualization/virt_ivshmem.c
+index 8e34d0d00d..a9d45a0da2 100644
+--- zephyr/drivers/virtualization/virt_ivshmem.c
++++ zephyr/drivers/virtualization/virt_ivshmem.c
+@@ -244,4 +244,4 @@ static struct ivshmem ivshmem_data;
+ 
+ DEVICE_DEFINE(ivshmem, CONFIG_IVSHMEM_DEV_NAME,
+ 	      ivshmem_init, NULL, &ivshmem_data, NULL,
+-	      POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &ivshmem_api);
++	      PRE_KERNEL_2, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &ivshmem_api);
+diff --git zephyr/dts/x86/ia32.dtsi zephyr/dts/x86/ia32.dtsi
+index f44cc32204..b4e6a70e8c 100644
+--- zephyr/dts/x86/ia32.dtsi
++++ zephyr/dts/x86/ia32.dtsi
+@@ -30,7 +30,7 @@
+ 
+ 	dram0: memory@0 {
+ 		device_type = "memory";
+-		reg = <DT_DRAM_BASE DT_DRAM_SIZE>;
++		reg = <DT_DRAM_BASE 0x2000000>;
+ 	};
+ 
+ 	soc {
+diff --git zephyr/include/arch/x86/intel64/linker.ld zephyr/include/arch/x86/intel64/linker.ld
+index fa842ea2fd..1f3f1874f6 100644
+--- zephyr/include/arch/x86/intel64/linker.ld
++++ zephyr/include/arch/x86/intel64/linker.ld
+@@ -180,6 +180,13 @@ SECTIONS
+ 	#include <snippets-rwdata.ld>
+ 	} GROUP_DATA_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
+ 
++	SECTION_PROLOGUE(ivshmem_write,,)
++	{
++	 . = ALIGN(16);
++	 *(.ivshmem)
++	 *(.ivshmem.*)
++	}GROUP_DATA_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
++
+ #include <linker/common-ram.ld>
+ #include <linker/cplusplus-ram.ld>
+ #include <arch/x86/pagetables.ld>
+diff --git zephyr/kernel/main_weak.c zephyr/kernel/main_weak.c
+index 954d73e1de..04cb79623e 100644
+--- zephyr/kernel/main_weak.c
++++ zephyr/kernel/main_weak.c
+@@ -24,5 +24,6 @@
+ void __weak main(void)
+ {
+ 	/* NOP default main() if the application does not provide one. */
++	printk("I am weak kernel\n");
+ 	arch_nop();
+ }
+
+Empty diff in 46 projects.

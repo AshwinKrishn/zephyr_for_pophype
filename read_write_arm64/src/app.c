@@ -4,7 +4,7 @@
 #include <pthread.h>
 
 #define BASE_SHMEM 0x60000000
-#define SIZE_SHMEM 0x30000000
+#define SIZE_SHMEM 0x3F000000
 
 #define STACKSIZ ((8192 *2) + CONFIG_TEST_EXTRA_STACKSIZE)
 
@@ -156,65 +156,34 @@ void main()
 			}
                 }
         }
-	memset(shr_addr,'B',5120);
-	for(int i = 0 ; i < SIZE_SHMEM - 0xf ; i++)
-        {       
-                *((char*)shr_addr + i)  = 'p' ;
-		if(i % 0x1000000 == 0)
-                {
-                        printf("Writing byte %x\n", (char*)shr_addr+i);
-                }
-        }
+//	memset(shr_addr,'B',5120);
 	while(1)
 	{
 		struct offload_struct *  inp = (struct offload_struct *)rw_buf.read_area ;
-		if(inp->new_request == 0xF00F0FF0)
+		if(inp->new_request == 0xf00f0ff0)
 		{
-		   if(inp->type == COMPUTE_VRANLC)	{	
-			printf("A request of type COMPUTE_VRANLC came\n");
-			printf("Args are %d , %f , %f and %f\n", *inp->args[0].location,*(double*)inp->args[1].location,*(double*)inp->args[2].location,*(double*)inp->args[3].location);
-			vranlc(*(int*)inp->args[0].location,(double*)inp->args[1].location,*(double*)inp->args[2].location , (double*)inp->args[3].location);
-			printf("Post computation value of y is %f and value of x is %f\n",*((double*)inp->args[3].location), *((double*)inp->args[1].location));			
-			
-			//indicate that you have consumed the message
-			*(uint32_t*)inp = ~(0xF00F0FF0);
+		if (inp->type == 0xDE)
+		  {
+			printf("x86 wants to go away , I am leaving too\n");
+			break;
+		  }
 
-			//Start replying
-			struct offload_struct ofld_vranlc ;
+		else if(inp->type == 9)	{	
+		uint32_t i = 0;
+		while(  i < SIZE_SHMEM   )
+        	{       
+			if(i>SIZE_SHMEM )
+			{
+				printf("I greater\n");
+			}
+			i+=6;
+			int res = memcmp(((char*)shr_addr + i),"Ashwin",6);
 
-			ofld_vranlc.new_request = 0xF00F0FF0;
-			void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);
-			
-			*((int*)write_pointer)  = *(int*)inp->args[0].location;
-		        ofld_vranlc.args[0].location =  (uint32_t*)((char*)write_pointer - 0x40000000);
-        		printf("Location of the int is %p\n",ofld_vranlc.args[0].location);
-      			write_pointer =  (void*)((char*)write_pointer +  sizeof(int));
-
-        		*((double*)write_pointer) = *(int*)inp->args[1].location;
-        		ofld_vranlc.args[1].location =  (uint32_t*)((char*)write_pointer - 0x40000000) ;
-        		printf("Location of the float pointer is %p\n",ofld_vranlc.args[1].location);
-        		write_pointer  =  (void*)((char*)write_pointer +  sizeof(double));
-
-        		*((double*)write_pointer) = *(int*)inp->args[2].location;
-        		ofld_vranlc.args[2].location =  (uint32_t*)((char*)write_pointer - 0x40000000) ;
-        		write_pointer  =  (void*)((char*)write_pointer +  sizeof(double));
-
-        		*((double*)write_pointer) = *(int*)inp->args[3].location;
-        		ofld_vranlc.args[3].location = (uint32_t*)((char*)write_pointer - 0x40000000)   ;
-
-
-        		ofld_vranlc.type = RESPOND_VRANLC;
-        		ofld_vranlc.args[0].size = 1;
-        		ofld_vranlc.args[0].type = INT;
-        		ofld_vranlc.args[1].size = 1;
-			ofld_vranlc.args[1].type = DOUBLE;
-        		ofld_vranlc.args[2].size = 1;
-        		ofld_vranlc.args[2].type = DOUBLE;
-        		ofld_vranlc.args[3].size = 1;
-        		ofld_vranlc.args[3].type = DOUBLE;
-
-        		memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );				
-
+			if(i % 0x1000000 == 0)
+                	{
+                        	printf("looping at addr %x \n", (char*)shr_addr+i);
+                	}
+        	}
 		   }
 		  else if(inp->type == BLACKSCHOLES_REQ)	{	
 			printf("A request of type BLACKSCHOLES_REQ came\n");
@@ -251,11 +220,7 @@ void main()
 
         		memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );				
 		   }
-		  else if (inp->type == 0xDE)
-		  {
-			printf("x86 wants to go away , I am leaving too\n");
-			break;
-		  }
+		   
 	     }
 	}
 	tid = 1;

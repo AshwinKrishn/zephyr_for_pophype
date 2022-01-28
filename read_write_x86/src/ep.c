@@ -7,8 +7,8 @@
 
 extern int md5_main();
 
-#define BASE_SHMEM 0x20000000
-#define SIZE_SHMEM 0x30000000
+#define BASE_SHMEM 0x60000000
+#define SIZE_SHMEM 0x3F000000
 
 enum request_type{
 	COMPUTE_VRANLC,
@@ -58,7 +58,7 @@ extern int freqmine_main(int argc, char **argv);
 
 void * shr_addr = BASE_SHMEM;
 
-void vranlc_dist( int n, double *x, double a, double y[] ){
+void vranlc_dist(  ){
 
 	printf("Size of double is %d\n",sizeof(double));
 
@@ -66,26 +66,9 @@ void vranlc_dist( int n, double *x, double a, double y[] ){
 	ofld_vranlc.new_request = 0xF00F0FF0;
 	void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);
 	
-	*((int*)write_pointer)  = n; 
-	ofld_vranlc.args[0].location =  (uint32_t*)((char*)write_pointer + 0x40000000);
-	printf("Location of the int is %p\n",ofld_vranlc.args[0].location);
-	write_pointer =  (void*)((char*)write_pointer +  sizeof(int));
-	
-	printf("Size after incrementing is %p\n",write_pointer);	
-	*((double*)write_pointer) = *x;
-        ofld_vranlc.args[1].location =  (uint32_t*)((char*)write_pointer + 0x40000000) ;
-	printf("Location of the float pointer is %p\n",ofld_vranlc.args[1].location);
-	write_pointer  =  (void*)((char*)write_pointer +  sizeof(double));
-        
-	*((double*)write_pointer) = a;
-	ofld_vranlc.args[2].location =  (uint32_t*)((char*)write_pointer + 0x40000000) ;
-	write_pointer  =  (void*)((char*)write_pointer +  sizeof(double));
-	
-	*((double*)write_pointer) = *y;	
-        ofld_vranlc.args[3].location = (uint32_t*)((char*)write_pointer + 0x40000000)   ;
 	
 		
-	ofld_vranlc.type = COMPUTE_VRANLC;
+	ofld_vranlc.type = 9;
 	ofld_vranlc.args[0].size = 1;
 	ofld_vranlc.args[0].type = INT; 
 	ofld_vranlc.args[1].size = 1;
@@ -97,29 +80,6 @@ void vranlc_dist( int n, double *x, double a, double y[] ){
 	
 	memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
 	printf("Copied the sturct details\n");
-	printf("Args are %d , %f , %f and %f\n", n,*x,a,*y);	
-	int request_feedback = 1;
-	while(1)
-	{
-		if((*((uint32_t*)rw_buf.write_area) == ~(0xF00F0FF0) ) && request_feedback )
-		{
-			printf("ARM has started calculating vranlc\n");
-			request_feedback = 0;
-		}
-		else
-		{
-			struct offload_struct *  outp = (struct offload_struct *)rw_buf.read_area ;
-			if(outp->new_request == 0xF00F0FF0)
-			{
-				*x = *(double*)outp->args[1].location;
-				*y = *(double*)outp->args[3].location;
-				printf("retrived values from ARM machine \n");
-				break;
-			}
-			
-		}
-
-	}	
 }
 int main() 
 {
@@ -130,14 +90,6 @@ int main()
   struct handshake hnsk = {
                 .present = 0x1FF1F11F,
         };
-	for(int i = 0 ; i < SIZE_SHMEM ; i++)
-        {
-                *((char*)shr_addr + i)  = 'p' ;
-                if(i % 0x1000000 == 0)
-                {
-                        printf("Writing  byte %x\n",i);
-                }
-        }
         struct handshake in_hnsk;
         *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
         memcpy(hnsk.arch, "x86",4);
@@ -149,6 +101,16 @@ int main()
 		if(i%2 == 0)
                 printf("%c",*(char*)shr_addr);
         }
+	for(int i = 0 ; i < SIZE_SHMEM ; i += 6)
+        {
+		memcpy((char*)shr_addr + i , "Ashwin" , 6);
+                if(i % 0x1000000 == 0)
+                {
+                        printf("Writing  byte %x\n",(char*)shr_addr+ i);
+                }
+        }
+
+	memcpy((char*)shr_addr  , "Ashwin" , 6);
 	if(in_hnsk.present == 0xE00E0EE0)
         {
                 printf("Already other core %s present in memory.\n",in_hnsk.arch);
@@ -176,9 +138,9 @@ int main()
                         }
                 }
         }
-        memset(shr_addr,'C',2048);
-	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
-        *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
+//	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
+//        *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
+	vranlc_dist();
 	printf("x86_kernel_ shraed memory area exiting\n");
 	struct timeval tv;
   gettimeofday(&tv,(void *)0);
