@@ -67,7 +67,7 @@ static data_t datasets[] = {
 };
 
 pthread_t* threads;
-int next_buf = 0;
+int *  next_buf ;
 
 /*
 *   Function: initialize
@@ -132,7 +132,7 @@ void* md5_thread(void* arg) {
     threadarg_t* args = (threadarg_t*)arg;
 
 
-    while((buf_to_process = __sync_fetch_and_add(&next_buf, 1)) < args->numbufs) {
+    while((buf_to_process = __sync_fetch_and_add(next_buf, 1)) < args->numbufs) {
          printf("Processing buf %d\n", buf_to_process);
         process(args->in[buf_to_process], args->out + buf_to_process * DIGEST_SIZE, args->size);
     }
@@ -154,22 +154,33 @@ void run(md5bench_t* args) {
 	pthread_t new_thread[2] ;
     	threadarg_t threadargs[args->numthreads];
     	for(int iter = 0; iter < args->iterations; iter++) {
-		next_buf = 0;
+	*next_buf = 0;
         for(int i = 0; i < args->numthreads; i++) {
             threadargs[i].in = args->inputs;
             threadargs[i].out = args->out;
             threadargs[i].size = args->size;
             threadargs[i].numbufs = args->numinputs;
             threadargs[i].tid = i;
+            threadargs[i].next_buf = next_buf;
 	    pthread_attr_init(&attrp[i]);
 	    pthread_attr_setstack(&attrp[i], &stacks_mt[0][i], STACKSZ);
+	
+	if(i%2){
 	    pthread_create(&threads[i], &attrp[i], md5_thread, &threadargs[i]);
         }
-
+	else{
+	   offload_md5_struct * md5_struct =  (offload_md5_struct *) MyMalloc( sizeof(offload_md5_struct)); 
+	   md5_struct->arg_location  = (threadarg_t *)  MyMalloc( sizeof(threadarg_t)); 
+	   memcpy(md5_struct->arg_location , &threadargs[i], sizeof(threadarg_t) );
+	   
+	   offload_md5_thread(md5_struct);
+	}
+	}
+	}
         for(int i = 0; i < args->numthreads; i++) {
-            pthread_join(threads[i], NULL);
+            if(i%2)
+		pthread_join(threads[i], NULL);
         }
-    }
 }
 
 /*
@@ -255,11 +266,14 @@ int md5_main() {
     extern int optind;
 
     timer io_start, b_start, b_end;
-
+    
     md5bench_t args;
-    // Default values for benchmark params
+    
+    next_buf = (int*)MyMalloc( sizeof(int));
+    *next_buf = 0; 
+	// Default values for benchmark params
     args.input_set = 6;
-    args.iterations = 10;
+    args.iterations = 1;
     args.outflag = 0;
     args.numthreads = 2;
     args.pinning = 0;

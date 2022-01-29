@@ -46,4 +46,12 @@ typedef struct {
     int numbufs;
     int tid;
     int pin_thread;
+    int * next_buf;
 } threadarg_t;
+
+typedef struct {
+
+  threadarg_t * arg_location;
+
+
+} offload_md5_struct;

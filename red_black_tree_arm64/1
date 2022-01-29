@@ -67,7 +67,7 @@ static data_t datasets[] = {
 };
 
 pthread_t* threads;
-int *  next_buf ;
+int *  next_buf = 0x9E000000;
 
 /*
 *   Function: initialize
@@ -154,6 +154,9 @@ void run(md5bench_t* args) {
 	pthread_attr_t attrp[2] ;
 	pthread_t new_thread[2] ;
     	threadarg_t threadargs[args->numthreads];
+    	for(int iter = 0; iter < args->iterations; iter++) {
+	if(iter % 2 == 1){
+		*next_buf = 0;
         for(int i = 0; i < args->numthreads; i++) {
             threadargs[i].in = args->inputs;
             threadargs[i].out = args->out;
@@ -163,10 +166,15 @@ void run(md5bench_t* args) {
 	    pthread_attr_init(&attrp[i]);
 	    pthread_attr_setstack(&attrp[i], &stacks_mt[0][i], STACKSZ);
 	    md5_thread(&threadargs[i]);
+//	    pthread_create(&threads[i], &attrp[i], md5_thread, &threadargs[i]);
 
 
         }
 
+        for(int i = 0; i < args->numthreads; i++) {
+//            pthread_join(threads[i], NULL);
+        }
+    }
 }
 
 /*

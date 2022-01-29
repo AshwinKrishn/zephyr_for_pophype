@@ -1,4 +1,4 @@
-
+#include "md5_bmark.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -19,6 +19,7 @@ enum request_type{
 	COMPUTE_LOG,
 	RESPOND_VRANLC,
 	BLACKSCHOLES_REQ,
+	OFFLOAD_MD5_THREAD
 
 };
 enum arg_type {
@@ -60,28 +61,20 @@ volatile struct shared_area rw_buf;
 
 void * shr_addr = BASE_SHMEM;
 
-void vranlc_dist(  ){
+void offload_md5_thread( offload_md5_struct *  md5_struct){
 
-	printf("Size of double is %d\n",sizeof(double));
 
 	struct offload_struct  ofld_vranlc ;
 	ofld_vranlc.new_request = 0xF00F0FF0;
 	void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);
 	
+	ofld_vranlc.args[0].location = md5_struct ;
 	
 		
-	ofld_vranlc.type = 9;
-	ofld_vranlc.args[0].size = 1;
-	ofld_vranlc.args[0].type = INT; 
-	ofld_vranlc.args[1].size = 1;
-        ofld_vranlc.args[1].type = DOUBLE;
-	ofld_vranlc.args[2].size = 1;
-        ofld_vranlc.args[2].type = DOUBLE;
-	ofld_vranlc.args[3].size = 1;
-        ofld_vranlc.args[3].type = DOUBLE;
+	ofld_vranlc.type = OFFLOAD_MD5_THREAD;
 	
 	memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
-	printf("Copied the sturct details\n");
+	printf("Copied the sturct details for md5\n");
 }
 
 int main() 
@@ -94,7 +87,6 @@ int main()
                 .present = 0x1FF1F11F,
         };
 
-  md5_main();
         struct handshake in_hnsk;
         *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
         memcpy(hnsk.arch, "x86",4);
@@ -134,7 +126,7 @@ int main()
 	struct timeval tv;
   gettimeofday(&tv,(void *)0);
   printf("Seconds recorded is %d \n\n",tv.tv_sec);
-  //md5_main();    
+  md5_main();    
   printf("Requesting the ARM kernel to shutdown\n");
   struct offload_struct shutdown;
   shutdown.new_request = 0xF00F0FF0;
@@ -144,6 +136,6 @@ int main()
   printf("Seconds recorded is %d \n",tv.tv_sec);
   printf("x86_kernel_exiting\n");
         *((uint32_t*)rw_buf.read_area) = 0x00000000 ;
-//        *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
+      *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
   return 0;
 }

@@ -1,7 +1,10 @@
+#include "md5_bmark.h"
 #include <zephyr.h>
 #include <drivers/virtualization/ivshmem.h>
 #include <stdio.h>
 #include <pthread.h>
+
+extern int *  next_buf ;
 
 #define BASE_SHMEM 0x60000000
 #define SIZE_SHMEM 0x3F000000
@@ -21,7 +24,8 @@ enum request_type{
         COMPUTE_RANDLC,
         COMPUTE_LOG,
 	RESPOND_VRANLC,
-	BLACKSCHOLES_REQ
+	BLACKSCHOLES_REQ,
+	OFFLOAD_MD5_THREAD
 
 };
 enum arg_type {
@@ -72,47 +76,6 @@ int tid;
 
 
 
-void vranlc( int n, double *x, double a, double y[] )
-{
-  const double r23 = 1.1920928955078125e-07;
-  const double r46 = r23 * r23;
-  const double t23 = 8.388608e+06;
-  const double t46 = t23 * t23;
-
-  double t1, t2, t3, t4, a1, a2, x1, x2, z;
-
-  int i;
-
-  //--------------------------------------------------------------------
-  //  Break A into two parts such that A = 2^23 * A1 + A2.
-  //--------------------------------------------------------------------
-  t1 = r23 * a;
-  a1 = (int) t1;
-  a2 = a - t23 * a1;
-
-  //--------------------------------------------------------------------
-  //  Generate N results.   This loop is not vectorizable.
-  //--------------------------------------------------------------------
-  for ( i = 0; i < n; i++ ) {
-    //--------------------------------------------------------------------
-    //  Break X into two parts such that X = 2^23 * X1 + X2, compute
-    //  Z = A1 * X2 + A2 * X1  (mod 2^23), and then
-    //  X = 2^23 * Z + A2 * X2  (mod 2^46).
-    //--------------------------------------------------------------------
-    t1 = r23 * (*x);
-    x1 = (int) t1;
-    x2 = *x - t23 * x1;
-    t1 = a1 * x2 + a2 * x1;
-    t2 = (int) (r23 * t1);
-    z = t1 - t23 * t2;
-    t3 = t23 * z + a2 * x2;
-    t4 = (int) (r46 * t3) ;
-    *x = t3 - t46 * t4;
-    y[1] = r46 * (*x);
-  }
-
-  return;
-}
 
 
 void main()
@@ -156,7 +119,7 @@ void main()
 			}
                 }
         }
-//	memset(shr_addr,'B',5120);
+//	md5_main();	
 	while(1)
 	{
 		struct offload_struct *  inp = (struct offload_struct *)rw_buf.read_area ;
@@ -170,46 +133,32 @@ void main()
 
 		else if(inp->type == 9)	{	
 		   }
-		  else if(inp->type == BLACKSCHOLES_REQ)	{	
-			printf("A request of type BLACKSCHOLES_REQ came\n");
-			printf("Locations are %x , %x , %x and %x\n", (void*)inp->args[0].location);
-			printf("values needed only arg 4 %d\n",*(int*)inp->args[0].location);
-				
+		  else if(inp->type == OFFLOAD_MD5_THREAD)	{	
+			printf("A request of type OFFLOAD_MD5_THREAD came\n");
 			//do the work here
-			pthread_attr_t attr;
-			pthread_t threadid;
-			pthread_attr_init(&attr);
-			pthread_attr_setstack(&attr, &blasch_stacks[0], STACKSIZ);
 		
 				
 			//indicate that you have consumed the message
 			*(uint32_t*)inp = ~(0xF00F0FF0);
-
+			
 			//Start replying
-			struct offload_struct ofld_vranlc ;
+			offload_md5_struct *  ofld_md5 = (struct offload_struct *) inp->args[0].location;
+			next_buf = ofld_md5->arg_location->next_buf;
+			
+			
+			md5_thread(ofld_md5->arg_location);		
 
-			ofld_vranlc.new_request = 0xF00F0FF0;
+				
 			void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);
 			
 
 
-        		ofld_vranlc.type = COMPUTE_VRANLC;
-        		ofld_vranlc.args[0].size = 1;
-        		ofld_vranlc.args[0].type = INT;
-        		ofld_vranlc.args[1].size = 1;
-			ofld_vranlc.args[1].type = DOUBLE;
-        		ofld_vranlc.args[2].size = 1;
-        		ofld_vranlc.args[2].type = DOUBLE;
-        		ofld_vranlc.args[3].size = 1;
-        		ofld_vranlc.args[3].type = DOUBLE;
-
-        		memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );				
+        		//memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );				
 		   }
 		   
 	     }
 	}
 	tid = 1;
-	
 	printf("ARM_kernel_exiting\n");
      	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
      	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;
