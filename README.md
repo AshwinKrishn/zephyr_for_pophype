@@ -8,3 +8,5 @@ How to build ARM64
 2) copy the config file from application folder and paste it as .config in zephyrproject/build/zephyr/.config
 
 PARSEC build folders ivshmem_arm64 and blackscholes_x86
+
+red_black_tree _ [ARCH] folder actually contains md5 code. 
