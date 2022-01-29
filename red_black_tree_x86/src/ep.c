@@ -7,7 +7,6 @@
 #include "mymalloc.h"
 
 
-
 extern int md5_main();
 extern int rb_tree_main();
 
@@ -58,7 +57,6 @@ struct handshake
 };
 volatile struct shared_area rw_buf; 
 
-extern int freqmine_main(int argc, char **argv);
 
 void * shr_addr = BASE_SHMEM;
 
@@ -85,14 +83,7 @@ void vranlc_dist(  ){
 	memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
 	printf("Copied the sturct details\n");
 }
-int malloc_crap_out()
-{
-	for(int i = 0 ; i < 10 ; i++)
-	{
- 		int * my_malloced_area = MyMalloc(100);
-		printf("Malloced address is %p\n",my_malloced_area);
-	}
-}
+
 int main() 
 {
 
@@ -102,9 +93,8 @@ int main()
   struct handshake hnsk = {
                 .present = 0x1FF1F11F,
         };
- // malloc area
-	malloc_crap_out();
 
+  md5_main();
         struct handshake in_hnsk;
         *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
         memcpy(hnsk.arch, "x86",4);
@@ -144,7 +134,7 @@ int main()
 	struct timeval tv;
   gettimeofday(&tv,(void *)0);
   printf("Seconds recorded is %d \n\n",tv.tv_sec);
-    
+  //md5_main();    
   printf("Requesting the ARM kernel to shutdown\n");
   struct offload_struct shutdown;
   shutdown.new_request = 0xF00F0FF0;

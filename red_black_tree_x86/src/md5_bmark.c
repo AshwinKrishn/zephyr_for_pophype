@@ -17,6 +17,10 @@
  * along with Starbench.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <zephyr.h>
+
+#define STACKSZ (1024 + CONFIG_TEST_EXTRA_STACKSIZE)
+static K_THREAD_STACK_ARRAY_DEFINE(stacks_mt, 1, STACKSZ);
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,23 +83,23 @@ int initialize(md5bench_t* args) {
 
     args->numinputs = datasets[index].numbufs;
     args->size = datasets[index].bufsize;
-    args->inputs = (uint8_t**)calloc(args->numinputs, sizeof(uint8_t*));
-    args->out = (uint8_t*)calloc(args->numinputs, DIGEST_SIZE);
-    threads = (pthread_t*)calloc(args->numthreads, sizeof(pthread_t));
+    args->inputs = (uint8_t**)MyMalloc(args->numinputs * sizeof(uint8_t*));
+    args->out = (uint8_t*)MyMalloc(args->numinputs * DIGEST_SIZE);
+    threads = (pthread_t*)MyMalloc(args->numthreads* sizeof(pthread_t));
     if(args->inputs == NULL || args->out == NULL || threads == NULL) {
-        fprintf(stderr, "Memory Allocation Error\n");
+        printf( "Memory Allocation Error\n");
         return -1;
     }
 
-    fprintf(stderr, "Reading input set: %d buffers, %d bytes per buffer\n", datasets[index].numbufs, datasets[index].bufsize);
-    fprintf(stderr, "Using %d parallel threads\n", args->numthreads);
+    printf( "Reading input set: %d buffers, %d bytes per buffer\n   ", datasets[index].numbufs, datasets[index].bufsize);
+    printf( "Using %d parallel threads\n", args->numthreads);
 
     // Now the input buffers need to be generated, for replicability, use same seed
     srand(datasets[index].rseed);
 
     for(int i = 0; i < args->numinputs; i++) {
-        args->inputs[i] = (uint8_t*)malloc(sizeof(uint8_t)*datasets[index].bufsize);
-        uint8_t* p = args->inputs[i];
+        args->inputs[i] = (uint8_t*)MyMalloc(sizeof(uint8_t)*datasets[index].bufsize);
+	uint8_t* p = args->inputs[i];
         if(p == NULL) {
             printf("Memory Allocation Error here\n");
             return -1;
@@ -145,8 +149,11 @@ void* md5_thread(void* arg) {
 *   buffer.
 */
 void run(md5bench_t* args) {
-    threadarg_t threadargs[args->numthreads];
-    for(int iter = 0; iter < args->iterations; iter++) {
+
+	pthread_attr_t attrp[2] ;
+	pthread_t new_thread[2] ;
+    	threadarg_t threadargs[args->numthreads];
+    	for(int iter = 0; iter < args->iterations; iter++) {
 		next_buf = 0;
         for(int i = 0; i < args->numthreads; i++) {
             threadargs[i].in = args->inputs;
@@ -154,7 +161,9 @@ void run(md5bench_t* args) {
             threadargs[i].size = args->size;
             threadargs[i].numbufs = args->numinputs;
             threadargs[i].tid = i;
-            pthread_create(&threads[i], NULL, &md5_thread, &threadargs[i]);
+	    pthread_attr_init(&attrp[i]);
+	    pthread_attr_setstack(&attrp[i], &stacks_mt[0][i], STACKSZ);
+	    pthread_create(&threads[i], &attrp[i], md5_thread, &threadargs[i]);
         }
 
         for(int i = 0; i < args->numthreads; i++) {
@@ -249,19 +258,19 @@ int md5_main() {
 
     md5bench_t args;
     // Default values for benchmark params
-    args.input_set = 0;
-    args.iterations = 1;
+    args.input_set = 6;
+    args.iterations = 10;
     args.outflag = 0;
-    args.numthreads = 1;
+    args.numthreads = 2;
     args.pinning = 0;
 
     // Who we are
-    printf(stderr, "StarBench - MD5 Kernel\n");
-    args.input_set = 4;
+    printf( "StarBench - MD5 Kernel\n");
+/*    args.input_set = 4;
     args.iterations = 40;
     args.numthreads = 2;
     args.pinning = 0;
-         
+*/         
      listInputs();
 
 	if(args.iterations < 1 || args.numthreads < 1) {
@@ -276,19 +285,18 @@ int md5_main() {
         printf( "Initialization Error\n");
         exit(EXIT_FAILURE);
     }
-
     TIME(b_start);
 
     run(&args);
-
+    
     TIME(b_end);
 
     // Free memory
-    if(finalize(&args)) {
+/*    if(finalize(&args)) {
 		printf( "Finalization Error\n");
 		exit(EXIT_FAILURE);
 	}
-
+*/
     double io_time = (double)timediff(&io_start, &b_start)/1000;
     double b_time = (double)timediff(&b_start, &b_end)/1000;
 
