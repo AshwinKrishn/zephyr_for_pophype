@@ -17,6 +17,7 @@
 #define MAX(X,Y)  (((X) > (Y)) ? (X) : (Y))
 uint32_t * linear_shmem = 0x30000000;
 
+
 #define MK        16
 #define MM        (M - MK)
 #define NN        (1 << MM)
@@ -98,88 +99,15 @@ void bs_dist(  int tid ){
 		if((*((uint32_t*)rw_buf.write_area) == ~(0xF00F0FF0) ) && request_feedback )
 		{
 			printf("ARM has started calculating blackscholes\n");
+
 			request_feedback = 0;
-		}
-		else
-		{
-			struct offload_struct *  outp = (struct offload_struct *)rw_buf.read_area ;
-			if(outp->new_request == 0xF00F0FF0)
-			{
-				//*x = *(double*)outp->args[1].location;
-				//*y = *(double*)outp->args[3].location;
-				printf("retrived values from ARM machine \n");
-				break;
-			}
-			
+			break;
 		}
 
 	}	
 }
 
 
-void vranlc_dist( int n, double *x, double a, double y[] ){
-
-	printf("Size of double is %d\n",sizeof(double));
-
-	struct offload_struct  ofld_vranlc ;
-	ofld_vranlc.new_request = 0xF00F0FF0;
-	void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);
-	
-	*((int*)write_pointer)  = n; 
-	ofld_vranlc.args[0].location =  (uint32_t*)((char*)write_pointer + 0x40000000);
-	printf("Location of the int is %p\n",ofld_vranlc.args[0].location);
-	write_pointer =  (void*)((char*)write_pointer +  sizeof(int));
-	
-	printf("Size after incrementing is %p\n",write_pointer);	
-	*((double*)write_pointer) = *x;
-        ofld_vranlc.args[1].location =  (uint32_t*)((char*)write_pointer + 0x40000000) ;
-	printf("Location of the float pointer is %p\n",ofld_vranlc.args[1].location);
-	write_pointer  =  (void*)((char*)write_pointer +  sizeof(double));
-        
-	*((double*)write_pointer) = a;
-	ofld_vranlc.args[2].location =  (uint32_t*)((char*)write_pointer + 0x40000000) ;
-	write_pointer  =  (void*)((char*)write_pointer +  sizeof(double));
-	
-	*((double*)write_pointer) = *y;	
-        ofld_vranlc.args[3].location = (uint32_t*)((char*)write_pointer + 0x40000000)   ;
-	
-		
-	ofld_vranlc.type = COMPUTE_VRANLC;
-	ofld_vranlc.args[0].size = 1;
-	ofld_vranlc.args[0].type = INT; 
-	ofld_vranlc.args[1].size = 1;
-        ofld_vranlc.args[1].type = DOUBLE;
-	ofld_vranlc.args[2].size = 1;
-        ofld_vranlc.args[2].type = DOUBLE;
-	ofld_vranlc.args[3].size = 1;
-        ofld_vranlc.args[3].type = DOUBLE;
-	
-	memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
-	printf("Copied the sturct details\n");
-	printf("Args are %d , %f , %f and %f\n", n,*x,a,*y);	
-	int request_feedback = 1;
-	while(1)
-	{
-		if((*((uint32_t*)rw_buf.write_area) == ~(0xF00F0FF0) ) && request_feedback )
-		{
-			printf("ARM has started calculating vranlc\n");
-			request_feedback = 0;
-		}
-		else
-		{
-			struct offload_struct *  outp = (struct offload_struct *)rw_buf.read_area ;
-			if(outp->new_request == 0xF00F0FF0)
-			{
-				*x = *(double*)outp->args[1].location;
-				*y = *(double*)outp->args[3].location;
-				printf("retrived values from ARM machine \n");
-				break;
-			}
-			
-		}
-
-	}	
-}
 int main() 
 {
   double Mops, t1, t2, t3, t4, x1, x2;
