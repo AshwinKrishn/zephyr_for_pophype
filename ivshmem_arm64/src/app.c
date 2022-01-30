@@ -3,6 +3,18 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#define fptype float
+
+extern int    * otype;
+extern fptype * sptprice;
+extern fptype * strike;
+extern fptype * rate;
+extern fptype * volatility;
+extern fptype * otime;
+
+extern fptype *prices; 
+extern fptype * buffer;
+extern int * buffer2;
 
 #define STACKSIZ ((8192 *2) + CONFIG_TEST_EXTRA_STACKSIZE)
 
@@ -147,21 +159,22 @@ void main()
 	blackscholes_main();
 	while(1)
 	{
-		struct offload_struct *  inp = (struct offload_struct *)rw_buf.read_area ;
-		if(inp->new_request == 0xF00F0FF0)
-		{
-
-		   }
-		  else if(inp->type == BLACKSCHOLES_REQ)	{	
+		volatile struct offload_struct *  inp = (struct offload_struct *)rw_buf.read_area ;
+		if(inp->new_request == 0xF00F0FF0){
+		if(inp->type == BLACKSCHOLES_REQ)	{	
 			printf("A request of type BLACKSCHOLES_REQ came\n");
-			printf("Locations are %x , %x , %x and %x\n", (void*)inp->args[0].location);
 			printf("values needed only arg 4 %d\n",*(int*)inp->args[0].location);
+			
+			prices = *inp->args[1].location;
+			buffer = *inp->args[2].location;		
+			buffer2 =*inp->args[3].location;
+
+			//indicate that you have consumed the message
+			*(uint32_t*)inp = ~(0xF00F0FF0);
 				
 			//do the work here
 			bs_thread((void *)inp->args[0].location);
 			
-			//indicate that you have consumed the message
-			*(uint32_t*)inp = ~(0xF00F0FF0);
 
 			//Start replying
 			struct offload_struct ofld_vranlc ;
@@ -188,10 +201,9 @@ void main()
 			printf("x86 wants to go away , I am leaving too\n");
 			break;
 		  }
-	     }
+	     
+		}
 	}
-	tid = 1;
-	//bs_thread((void*)&tid);
 	printf("ARM_kernel_exiting\n");
      	*((uint32_t*)rw_buf.read_area) = 0x00000000 ;
      	*((uint32_t*)rw_buf.write_area) = 0x00000000 ;

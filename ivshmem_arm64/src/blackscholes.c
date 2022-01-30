@@ -17,6 +17,9 @@
 #include <fcntl.h>
 #include <sys/printk.h>
 
+#define ERR_CHK 1
+
+#define fptype float
 #ifdef ENABLE_PARSEC_HOOKS
 #include <hooks.h>
 #endif
@@ -48,7 +51,11 @@
 #include <time.h>
 
 
+#define PAD 256
+#define LINESIZE 64
 
+    fptype * buffer;
+    int * buffer2;
 
 #define MAX_THREADS 128
 
@@ -85,13 +92,12 @@ using namespace tbb;
 #endif
 
 //Precision to use for calculations
-#define fptype float
 
 #define NUM_RUNS 500
 
 
 extern OptionData datainit[10];
-OptionData data_compute[1000];
+OptionData * data_compute;
 //= 0x70000000;
 OptionData *data;
 fptype *prices;
@@ -315,6 +321,13 @@ int bs_thread(void *tid_ptr) {
     int start = tid * (numOptions / nThreads);
     int end = start + (numOptions / nThreads);
     
+    sptprice = (fptype *) (((unsigned long long)buffer + PAD) & ~(LINESIZE - 1));
+    strike = sptprice + numOptions;
+    rate = strike + numOptions;
+    volatility = rate + numOptions;
+    otime = volatility + numOptions;
+    otype = (int *) (((unsigned long long)buffer2 + PAD) & ~(LINESIZE - 1));
+
 	printf("Thread %d/%d %d %d\n", tid, nThreads, start, end);
 //	if (tid % 2) migrate(1, NULL, NULL);
 
@@ -350,7 +363,7 @@ int bs_thread(void *tid_ptr) {
 	
     printf("%d\n", numOptions);
     for(i=0; i<numOptions; i++) {
-      printf("%.18f\n", prices[i]);
+      printf("%.18f %d \n", prices[i],i);
     }
 //	if (tid % 2) migrate(0, NULL, NULL);
 	//pthread_exit(tid_ptr);
@@ -363,10 +376,7 @@ int blackscholes_main ()
     FILE *file;
     int i;
     int loopnum;
-    fptype * buffer;
-    int * buffer2;
     int rv;
-    init_data_init();
 #ifdef PARSEC_VERSION
 #define __PARSEC_STRING(x) #x
 #define __PARSEC_XSTRING(x) __PARSEC_STRING(x)
@@ -377,14 +387,15 @@ int blackscholes_main ()
 #ifdef ENABLE_PARSEC_HOOKS
    __parsec_bench_begin(__parsec_blackscholes);
 #endif
-		
-	for(int i = 0 ; i < 250 ; i++)
-	{
-		memcpy((void*)&data_compute[i*4], (void*)datainit , 4*sizeof(OptionData));
-	}
+	OptionData data_init[] = {
+	    #include "optionData.txt"
+	};		
+	data_compute = (OptionData *)MyMalloc(sizeof(OptionData) * 1000);
+	memcpy((void*)data_compute, (void*)data_init , 1000*sizeof(OptionData));	
+	
 	for(int i = 0 ; i<4; i++)
 	{
-	printf("i copied %f %f %f %f %f %f %c %f %f\n", data_compute[i].s, data_compute[i].strike, data_compute[i].r, data_compute[i].divq, data_compute[i].v, data_compute[i].t, data_compute[i].OptionType, data_compute[i].divs, data_compute[i].DGrefval);
+	//printf("i copied %f %f %f %f %f %f %c %f %f\n", data_compute[i].s, data_compute[i].strike, data_compute[i].r, data_compute[i].divq, data_compute[i].v, data_compute[i].t, data_compute[i].OptionType, data_compute[i].divs, data_compute[i].DGrefval);
 //	printf("initialized %f %f %f %f %f %f %c %f %f\n", datainit[loopnum].s, datainit[loopnum].strike, datainit[loopnum].r, datainit[loopnum].divq, datainit[loopnum].v, datainit[loopnum].t, datainit[loopnum].OptionType, datainit[loopnum].divs, datainit[loopnum].DGrefval);
         	
 	}	
@@ -394,12 +405,12 @@ int blackscholes_main ()
                 exit(1);
         }
 */
-    nThreads = 4;
+    nThreads = 2;
 //    char *inputFile = argv[2];
 //    char *outputFile = argv[3];
 
     //Read input data from file
-    numOptions = 20;
+    numOptions = 1000;
     if(nThreads > numOptions) {
       printf("WARNING: Not enough work, reducing number of threads to match number of options.\n");
       nThreads = numOptions;
@@ -414,7 +425,7 @@ int blackscholes_main ()
 
     // alloc spaces for the option data
 	data = data_compute;
-    prices = (fptype*)malloc(numOptions*sizeof(fptype));
+//    prices = (fptype*)MyMalloc(numOptions*sizeof(fptype));
 //    data = (OptionData*)malloc(numOptions*sizeof(OptionData));
 
 
@@ -434,20 +445,18 @@ int blackscholes_main ()
     printf("Num of Options: %d\n", numOptions);
     printf("Num of Runs: %d\n", NUM_RUNS);
 
-#define PAD 256
-#define LINESIZE 64
 
-    buffer = (fptype *) malloc(5 * numOptions * sizeof(fptype) + PAD);
+//    buffer = (fptype *) MyMalloc(5 * numOptions * sizeof(fptype) + PAD);
     sptprice = (fptype *) (((unsigned long long)buffer + PAD) & ~(LINESIZE - 1));
     strike = sptprice + numOptions;
     rate = strike + numOptions;
     volatility = rate + numOptions;
     otime = volatility + numOptions;
 
-    buffer2 = (int *) malloc(numOptions * sizeof(fptype) + PAD);
+//    buffer2 = (int *) MyMalloc(numOptions * sizeof(fptype) + PAD);
     otype = (int *) (((unsigned long long)buffer2 + PAD) & ~(LINESIZE - 1));
 
-    for (i=0; i<numOptions; i++) {
+/*    for (i=0; i<numOptions; i++) {
         otype[i]      = (data[i].OptionType == 'P') ? 1 : 0;
 	sptprice[i]   = data[i].s;
         strike[i]     = data[i].strike;
@@ -457,7 +466,7 @@ int blackscholes_main ()
     }
 
     printf("Size of data: %d\n", numOptions * (sizeof(OptionData) + sizeof(int)));
-
+*/
 #ifdef ENABLE_PARSEC_HOOKS
     __parsec_roi_begin();
 #endif
@@ -493,7 +502,7 @@ int blackscholes_main ()
     }
 ;
     }
-   	usleep(USEC_PER_MSEC * 100U); 
+   	//usleep(USEC_PER_MSEC * 100U); 
     {
         int _M4_i;
         void *_M4_ret;

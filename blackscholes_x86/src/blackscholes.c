@@ -391,13 +391,13 @@ OptionData data_init[] = {
                 exit(1);
         }
 */
-    nThreads = 1;
+    nThreads = 2;
 //    char *inputFile = argv[2];
 //    char *outputFile = argv[3];
 
     //Read input data from file
     numOptions = 1000;
-    numOptions = 10;
+    numOptions = 1000;
     if(nThreads > numOptions) {
       printf("WARNING: Not enough work, reducing number of threads to match number of options.\n");
       nThreads = numOptions;
@@ -413,6 +413,7 @@ OptionData data_init[] = {
     // alloc spaces for the option data
 	data = data_compute;
     prices = (fptype*)MyMalloc(numOptions*sizeof(fptype));
+	memset(prices,'\0',numOptions*sizeof(fptype));
 //    data = (OptionData*)malloc(numOptions*sizeof(OptionData));
 
 
@@ -486,12 +487,12 @@ OptionData data_init[] = {
         for ( _M4_i = 0; _M4_i < MAX_THREADS; _M4_i++) {
             if ( _M4_threadsTableAllocated[_M4_i] == 0)    break;
         }
-	//if(i%2)
-	if(1)
+	if(i%2)
+	//if(1)
         	pthread_create(&_M4_threadsTable[_M4_i],&attr[i],(void *(*)(void *))bs_thread,(void *)&tids[i]);
 	else{
 		printf("Send to other core Arg1 : %lu and ARg 4 : %d \n", _M4_threadsTable[_M4_i] , tids[i]);
-		bs_dist(tids[i]);
+		bs_dist(tids[i] , prices , buffer , buffer2);
        		}
 		 _M4_threadsTableAllocated[_M4_i] = 1;
     }
@@ -536,10 +537,10 @@ OptionData data_init[] = {
 
     //Write prices to output file
     printf("%d\n", numOptions);
-    for(i=0; i<numOptions; i++) {
+/*    for(i=0; i<numOptions; i++) {
       printf("%.18f\n", prices[i]);
     }
-
+*/	while(prices[499] <= 0.00);
 #ifdef ERR_CHK
     printf("Num Errors: %d\n", numError);
 #endif

@@ -17,6 +17,7 @@
 #define MAX(X,Y)  (((X) > (Y)) ? (X) : (Y))
 uint32_t * linear_shmem = 0x30000000;
 
+extern fptype *prices;
 
 #define MK        16
 #define MM        (M - MK)
@@ -74,7 +75,7 @@ struct handshake
 volatile struct shared_area rw_buf; 
 
 
-void bs_dist(  int tid ){
+void bs_dist(  int tid , void * prices , void * buffer , void* buffer2){
 
 
 	struct offload_struct  ofld_vranlc ;
@@ -82,12 +83,29 @@ void bs_dist(  int tid ){
 	void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);
 
 	//these functions needs to be automated
-		
+	printf("addresses are %p , %p and %p\n",prices,buffer,buffer2);	
 	*((pthread_t*)write_pointer)  = tid; 
-	ofld_vranlc.args[0].location =  (uint32_t*)((char*)write_pointer + 0x40000000);
+	ofld_vranlc.args[0].location =  (uint32_t*)((char*)write_pointer + + 0x40000000);
 	write_pointer =  (void*)((char*)write_pointer +  sizeof(int));
-	
+	printf("write pointer is %p\n",write_pointer);	
+	*((uint32_t*)write_pointer)  = (uint32_t)prices; 
+	ofld_vranlc.args[1].location =  (uint32_t*)((char*)write_pointer + + 0x40000000);
+	write_pointer =  (void*)((char*)write_pointer +  sizeof(void*));
+
+	printf("write pointer is %p\n",write_pointer);	
 		
+	*((uint32_t*)write_pointer)  = buffer; 
+	ofld_vranlc.args[2].location =  (uint32_t*)((char*)write_pointer + + 0x40000000);
+	write_pointer =  (void*)((char*)write_pointer +  sizeof(void*));
+
+	printf("write pointer is %p\n",write_pointer);	
+	
+	*((uint32_t*)write_pointer)  = buffer2; 
+	ofld_vranlc.args[3].location =  (uint32_t*)((char*)write_pointer + + 0x40000000);
+	write_pointer =  (void*)((char*)write_pointer +  sizeof(void*));
+
+	printf("write pointer is %p\n",write_pointer);	
+	ofld_vranlc.new_request = 0xF00F0FF0;		
 	ofld_vranlc.type = BLACKSCHOLES_REQ;
 	
 	memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
@@ -169,16 +187,18 @@ int main()
 
   blackscholes_main();
     
+
+  gettimeofday(&tv,(void *)0);
+  for(i=0; i<1000; i++) {
+	printf("%.18f %d \n", prices[i],i);
+  } 
+  printf("Seconds recorded is %d \n",tv.tv_sec);
+  
   printf("Requesting the ARM kernel to shutdown\n");
-  memcpy((void*)linear_shmem,"Ashwin",6);
   struct offload_struct shutdown;
   shutdown.new_request = 0xF00F0FF0;
   shutdown.type = 0xDE;
   memcpy((void*)rw_buf.write_area , (void*)&shutdown , sizeof(struct offload_struct) );
-
-  gettimeofday(&tv,(void *)0);
-  printf("Seconds recorded is %d \n",tv.tv_sec);
-  memset((void*)0x30000000, 'n' , 8196);  
   printf("x86_kernel_exiting\n");
         *((uint32_t*)rw_buf.read_area) = 0x00000000 ;
 //        *((uint32_t*)rw_buf.write_area) = 0x00000000 ;
