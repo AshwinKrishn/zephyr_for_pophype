@@ -145,6 +145,8 @@ int main()
 	struct timeval tv;
   gettimeofday(&tv,(void *)0);
   printf("Seconds recorded is %d \n\n",tv.tv_sec);
+
+  while(*((uint32_t*)shr_addr) != 0xdeaddead);
     
   printf("Requesting the ARM kernel to shutdown\n");
   struct offload_struct shutdown;

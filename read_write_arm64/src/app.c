@@ -159,6 +159,7 @@ void main()
 //	memset(shr_addr,'B',5120);
 	while(1)
 	{
+		static uint32_t coun = 0;
 		struct offload_struct *  inp = (struct offload_struct *)rw_buf.read_area ;
 		if(inp->new_request == 0xf00f0ff0)
 		{
@@ -169,6 +170,7 @@ void main()
 		  }
 
 		else if(inp->type == 9)	{	
+	
 		uint32_t i = 0;
 		while(  i < SIZE_SHMEM   )
         	{       
@@ -176,14 +178,20 @@ void main()
 			{
 				printf("I greater\n");
 			}
-			i+=6;
 			int res = memcmp(((char*)shr_addr + i),"Ashwin",6);
-
+			if(res != 0){
+				printf(" error at addr %x \n", (char*)shr_addr+i);
+				coun++;
+			}
+				i+=6;
 			if(i % 0x1000000 == 0)
                 	{
                         	printf("looping at addr %x \n", (char*)shr_addr+i);
                 	}
         	}
+			printf("Number of errors is %x\n",coun);	
+			*(uint32_t*)shr_addr = 0xdeaddead;
+			break;
 		   }
 		  else if(inp->type == BLACKSCHOLES_REQ)	{	
 			printf("A request of type BLACKSCHOLES_REQ came\n");
@@ -224,10 +232,10 @@ void main()
 	     }
 	}
 	tid = 1;
-	printf("Contents of shmem area is ");
+//	printf("Contents of shmem area is ");
 	for(int i = 0 ; i < 8192 + 8192 ; i++)
 	{
-		printf("%c",*((char*)shr_addr + i));
+//		printf("%c",*((char*)shr_addr + i));
 	}
 	
 	printf("ARM_kernel_exiting\n");

@@ -1,4 +1,3 @@
-#include "md5_bmark.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -60,7 +59,7 @@ volatile struct shared_area rw_buf;
 
 
 void * shr_addr = BASE_SHMEM;
-
+/*
 void offload_md5_thread( offload_md5_struct *  md5_struct){
 
 
@@ -76,7 +75,7 @@ void offload_md5_thread( offload_md5_struct *  md5_struct){
 	memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
 	printf("Copied the sturct details for md5\n");
 }
-
+*/
 int main() 
 {
 
@@ -126,7 +125,8 @@ int main()
 	struct timeval tv;
   gettimeofday(&tv,(void *)0);
   printf("Seconds recorded is %d \n\n",tv.tv_sec);
-  md5_main();    
+  
+
   printf("Requesting the ARM kernel to shutdown\n");
   struct offload_struct shutdown;
   shutdown.new_request = 0xF00F0FF0;
