@@ -3,11 +3,14 @@
 #include <drivers/virtualization/ivshmem.h>
 #include <stdio.h>
 #include <pthread.h>
+#include "rbtree.h"
 
 extern int *  next_buf ;
 
 #define BASE_SHMEM 0x60000000
 #define SIZE_SHMEM 0x3F000000
+
+extern int kernel_rb_main(int * counter , void * mytree_in , struct mynode ** mn_in);
 
 #define STACKSIZ ((8192 *2) + CONFIG_TEST_EXTRA_STACKSIZE)
 
@@ -25,7 +28,8 @@ enum request_type{
         COMPUTE_LOG,
 	RESPOND_VRANLC,
 	BLACKSCHOLES_REQ,
-	OFFLOAD_MD5_THREAD
+	OFFLOAD_MD5_THREAD,
+	OFFLOAD_RBTREE
 
 };
 enum arg_type {
@@ -133,8 +137,8 @@ void main()
 
 		else if(inp->type == 9)	{	
 		   }
-		  else if(inp->type == OFFLOAD_MD5_THREAD)	{	
-			printf("A request of type OFFLOAD_MD5_THREAD came\n");
+		  else if(inp->type == OFFLOAD_RBTREE)	{	
+			printf("A request of type OFFLOAD_RBTREE came\n");
 			//do the work here
 		
 				
@@ -142,11 +146,12 @@ void main()
 			*(uint32_t*)inp = ~(0xF00F0FF0);
 			
 			//Start replying
-			offload_md5_struct *  ofld_md5 = (struct offload_struct *) inp->args[0].location;
-			next_buf = ofld_md5->arg_location->next_buf;
+			int *  ij = (int *) inp->args[0].location;
+			struct rb_root* treeroot = (struct rb_root*)inp->args[1].location;
+			struct mynode ** mn =( struct mynode **)inp->args[2].location;		
+
+			kernel_rb_main(ij , treeroot , mn);
 			
-			
-			md5_thread(ofld_md5->arg_location);		
 
 				
 			void * write_pointer = (void*)((char*)rw_buf.write_area + 0x1000);

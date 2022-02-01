@@ -64,7 +64,7 @@ void wait_for_other_core()
 
 	while(*(uint32_t*)0x9f000000 != 0x1a2b3c4d )
 	{
-		while(0);
+		printf("waiting for ARM to complete\n");
 	}
 	printf("ARM core is done with addition");
 }
@@ -152,10 +152,12 @@ int main()
                 }
         }
 
+  	rb_tree_main();
 	printf("x86_kernel_ shraed memory area exiting\n");
 	struct timeval tv;
   gettimeofday(&tv,(void *)0);
   printf("Seconds recorded is %d \n\n",tv.tv_sec);
+//  md5_main();   
   kernel_rb_main();
   printf("Requesting the ARM kernel to shutdown\n");
   struct offload_struct shutdown;
