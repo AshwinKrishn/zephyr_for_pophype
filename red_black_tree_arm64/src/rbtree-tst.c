@@ -31,7 +31,7 @@ char * global_lock;
 void MyLock(char *lock) {
     while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1)
 	{
-		printf("waiting for lock\n");
+//		printf("waiting for lock\n");
 	}
 }
 
@@ -98,7 +98,7 @@ void my_free(struct mynode *node)
 	}
 }
 
-#define NUM_NODES 200
+#define NUM_NODES 1000
 
 int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode ** mn_in , char * glob_mtx)
 {
@@ -119,8 +119,8 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	struct mynode *data = my_search(mytree_in, "10");
 	/* *delete again*/
 	static int num_deletions = 0;
-	while(num_deletions < 100){
-	for(int l = 0 ; l < 100 ; l++){
+	while(num_deletions < 500){
+	for(int l = 0 ; l < NUM_NODES ; l++){
 	MyLock(global_lock);
 		char text[4];
                 sprintf(text,"%x",l); 
@@ -128,14 +128,11 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	        if (data) {
                		rb_erase(&data->node, mytree_in);
 	        	printf("delete node %d: \n",l);
-                	my_free(data);
+//                	my_free(data);
 			num_deletions++;	
+			printf("Num deletions are %d\n",num_deletions);
         	}
 	MyUnlock(global_lock);
-	for(int pp = 0 ; pp < 10000 ; pp++ )
-	{
-		data = my_search(mytree_in, "10");
-	}
 	}
 	}
         /* *delete once again*/

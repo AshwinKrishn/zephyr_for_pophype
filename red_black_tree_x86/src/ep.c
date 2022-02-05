@@ -101,12 +101,12 @@ void  offload_rbtree_load(int * i,struct rb_root * mytree , struct mynode ** nod
 	ofld_vranlc.args[2].location	= nodes;
 	ofld_vranlc.args[3].location    = global_mtx;
 
-	printf("Addresses are i is at %p , mytree is at %p and nodes is at %p",ofld_vranlc.args[0].location , ofld_vranlc.args[1].location ,  ofld_vranlc.args[2].location );
+	printf("Addresses are i is at %p , mytree is at %p and nodes is at %p\n",ofld_vranlc.args[0].location , ofld_vranlc.args[1].location ,  ofld_vranlc.args[2].location );
         ofld_vranlc.type = OFFLOAD_RBTREE;
 
         memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
         printf("Copied the sturct details for rbtree \n");
-	wait_for_other_core();	
+//	wait_for_other_core();	
 
 }
 int main() 
