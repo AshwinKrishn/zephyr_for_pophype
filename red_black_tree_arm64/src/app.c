@@ -148,7 +148,7 @@ void main()
 			//Start replying
 			int *  ij = (int *) inp->args[0].location;
 			struct rb_root* treeroot = (struct rb_root*)inp->args[1].location;
-			struct mynode ** mn =( struct mynode **)inp->args[2].location;				       char * glob_mtx = (char *)inp->args[2].location;
+			struct mynode ** mn =( struct mynode **)inp->args[2].location;				       char * glob_mtx = (char *)inp->args[3].location;
 			kernel_rb_main(ij , treeroot , mn , glob_mtx);
 			
 

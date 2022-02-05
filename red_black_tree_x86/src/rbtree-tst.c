@@ -30,7 +30,9 @@ struct mynode {
 };
 
 void MyLock(char *lock) { 
-    while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1); 
+    while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1){
+	printf("Waiting for the lock\n");
+	}
 }
 
 void MyUnlock(char * lock)

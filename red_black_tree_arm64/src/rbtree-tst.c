@@ -29,7 +29,10 @@ struct rb_root mytree = RB_ROOT;
 char * global_lock;
 
 void MyLock(char *lock) {
-    while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1);
+    while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1)
+	{
+		printf("waiting for lock\n");
+	}
 }
 
 void MyUnlock(char * lock)
@@ -115,16 +118,26 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 */
 	struct mynode *data = my_search(mytree_in, "10");
 	/* *delete again*/
-        printf("delete node 10: \n");
-        data = my_search(mytree_in, "10");
-        if (data) {
-		MyLock(global_lock); 
-               rb_erase(&data->node, mytree_in);
-                my_free(data);
-		MyUnlock(global_lock);
-		
-        }
-
+	static int num_deletions = 0;
+	while(num_deletions < 100){
+	for(int l = 0 ; l < 100 ; l++){
+	MyLock(global_lock);
+		char text[4];
+                sprintf(text,"%x",l); 
+	        data = my_search(mytree_in, text);
+	        if (data) {
+               		rb_erase(&data->node, mytree_in);
+	        	printf("delete node %d: \n",l);
+                	my_free(data);
+			num_deletions++;	
+        	}
+	MyUnlock(global_lock);
+	for(int pp = 0 ; pp < 10000 ; pp++ )
+	{
+		data = my_search(mytree_in, "10");
+	}
+	}
+	}
         /* *delete once again*/
         printf("delete node 15: \n");
         data = my_search(mytree_in, "15");
