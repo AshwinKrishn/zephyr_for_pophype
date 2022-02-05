@@ -98,7 +98,7 @@ void my_free(struct mynode *node)
 	}
 }
 
-#define NUM_NODES 1000
+#define NUM_NODES 1600
 
 int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode ** mn_in , char * glob_mtx)
 {
@@ -108,14 +108,8 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	/* *insert */
 	int * i = counter;
 	printf("insert node from 1 to NUM_NODES(32): \n");
-/*	for (; *i < NUM_NODES; ++*i) {
-		printf("Performing for iteration %d ",*i);
-		mn[*i] = (struct mynode *)MyMalloc(sizeof(struct mynode));
-		mn[*i]->string = (char *)MyMalloc(sizeof(char) * 4);
-		sprintf(mn[*i]->string, "%d", *i);
-		my_insert(mytree_in, mn[*i]);
-	}
-*/
+	
+
 	struct mynode *data = my_search(mytree_in, "10");
 	/* *delete again*/
 	static int num_deletions = 0;
@@ -135,15 +129,6 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	MyUnlock(global_lock);
 	}
 	}
-        /* *delete once again*/
-        printf("delete node 15: \n");
-        data = my_search(mytree_in, "15");
-        if (data) {
-		MyLock(global_lock);
-                rb_erase(&data->node, mytree_in);
-                my_free(data);
-        	MyUnlock(global_lock);
-	}
 	
 	/* *search */
 	struct rb_node *node;
@@ -152,7 +137,7 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 		printf("key = %s\n", rb_entry(node, struct mynode, node)->string);
 
 	*(uint32_t*)0x9f000000 = 0x1a2b3c4d;
-
+	printf("Leaving the RB tre fucntion\n");
 	return 0;
 }
 

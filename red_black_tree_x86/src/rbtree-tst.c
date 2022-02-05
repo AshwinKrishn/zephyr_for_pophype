@@ -100,7 +100,7 @@ void my_free(struct mynode *node)
 	}
 }
 
-#define NUM_NODES 1000
+#define NUM_NODES 1600
 
 int kernel_rb_main()
 {
