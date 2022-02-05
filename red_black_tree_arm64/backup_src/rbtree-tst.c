@@ -19,32 +19,28 @@
 #include <unistd.h>
 #include <string.h>
 
-extern void wait_for_other_core();
-extern void  offload_rbtree_load(int * i,struct rb_root * mytree , struct mynode ** nodes , char * global_mtx);
-
-char * global_lock;
-
 struct mynode {
   	struct rb_node node;
   	char *string;
 };
 
-void MyLock(char *lock) { 
-    while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1); 
+bool * global_lock;
+
+void MyLock(bool *lock) {
+    while (__atomic_test_and_set(lock,__ATOMIC_RELAXED) == 1);
 }
 
-void MyUnlock(char * lock)
+void MyUnlock(bool * lock)
 {
-	__atomic_clear(lock,__ATOMIC_RELAXED);
+        __atomic_clear(lock,__ATOMIC_RELAXED);
 }
 
-
-struct rb_root * mytree;
+struct rb_root mytree = RB_ROOT;
 
 struct mynode * my_search(struct rb_root *root, char *string)
 {
   	struct rb_node *node = root->rb_node;
-	
+//	k_mutex_lock(global_lock, K_FOREVER);
   	while (node) {
   		struct mynode *data = container_of(node, struct mynode, node);
 		int result;
@@ -58,12 +54,14 @@ struct mynode * my_search(struct rb_root *root, char *string)
 		else
   			return data;
 	}
+//	k_mutex_unlock(global_lock);
 	return NULL;
 }
 
 int my_insert(struct rb_root *root, struct mynode *data)
 {
-	struct rb_node **new = &(root->rb_node), *parent = NULL;
+//	k_mutex_lock(global_lock, K_FOREVER);
+  	struct rb_node **new = &(root->rb_node), *parent = NULL;
 
   	/* Figure out where to put new node */
   	while (*new) {
@@ -82,12 +80,16 @@ int my_insert(struct rb_root *root, struct mynode *data)
   	/* Add new node and rebalance tree. */
   	rb_link_node(&data->node, parent, new);
   	rb_insert_color(&data->node, root);
+//	k_mutex_unlock(global_lock);
 
 	return 1;
 }
 
 void my_free(struct mynode *node)
 {
+//	k_mutex_lock(global_lock, K_FOREVER);
+	static int free_called;
+	free_called++;
 	if (node != NULL) {
 		if (node->string != NULL) {
 			MyFree(node->string);
@@ -96,61 +98,45 @@ void my_free(struct mynode *node)
 		MyFree(node);
 		node = NULL;
 	}
+	printf("Free called %d times\n",free_called);
+//	k_mutex_unlock(global_lock);
+	
 }
 
-#define NUM_NODES 200
+#define NUM_NODES 500
 
-int kernel_rb_main()
+int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode ** mn_in , bool * my_mutex)
 {
 
-	struct mynode **mn = (struct mynode**)MyMalloc(NUM_NODES* sizeof(struct mynode *));
-	mytree = (struct rb_root *)MyMalloc(sizeof(struct rb_root));
-	*mytree = RB_ROOT;
+	struct mynode **mn = (struct mynode **)mn_in;
+	global_lock = my_mutex ;	
+	MyLock(my_mutex);
 	/* *insert */
-	global_lock = (char *)MyMalloc(sizeof(int));
-	memset(global_lock, 0 , sizeof(int));
+	int * i = counter;
+	static int removal; 	
+	struct mynode *data = my_search(mytree_in, "20");
+	while(removal < 15){
+	for(int dd = 0 ; dd < 3900 ; dd++){
+		char text[4];
+		sprintf(text,"%x",dd);
+        	data = my_search(mytree_in, text);
+        	if (data) {
+	        	printf("delete node %d: \n",dd);
+                	rb_erase(&data->node, mytree_in);
+			removal++;
+			my_free(data);
+        	}
 	
-	volatile int * i = (int *)MyMalloc(sizeof(int) );
-	
-	printf("Size of rb node is %d\n",sizeof(struct rb_node));
-	*i = 0;
-	printf("insert node from 1 to %d: \n",NUM_NODES);
-	for (; *i < NUM_NODES; (*i) += 1) {
-		MyLock(global_lock);
-		mn[*i] = (struct mynode *)MyMalloc(sizeof(struct mynode));
-		mn[*i]->string = (char *)MyMalloc(sizeof(char) * 4);
-		printf("Inserting %d\n",*i);
-		sprintf(mn[*i]->string, "%x", *i);
-		my_insert(mytree, mn[*i]);
-		MyUnlock(global_lock);
+	}
 	}
 	
-
-	offload_rbtree_load(i,mytree , mn, global_lock);
-	
-
-
 	/* *search */
 	struct rb_node *node;
 	printf("search all nodes: \n");
-	MyLock(global_lock);
-	for (node = rb_first(mytree); node; node = rb_next(node))
+	for (node = rb_first(mytree_in); node; node = rb_next(node))
 		printf("key = %s\n", rb_entry(node, struct mynode, node)->string);
-	MyUnlock(global_lock);
-	/* *delete */
-	printf("delete node 20: \n");
-	struct mynode *data = my_search(mytree, "20");
-	if (data) {
-		MyLock(global_lock);
-		rb_erase(&data->node, mytree);
-		my_free(data);
-		MyUnlock(global_lock);
-	}
-	
-	/* *search again*/
-	printf("search again:\n");
-	for (node = rb_first(mytree); node; node = rb_next(node))
-		printf("key = %s\n", rb_entry(node, struct mynode, node)->string);
+
+
 	return 0;
 }
 

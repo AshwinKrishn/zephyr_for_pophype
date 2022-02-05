@@ -88,7 +88,7 @@ void offload_md5_thread( offload_md5_struct *  md5_struct){
 	printf("Copied the sturct details for md5\n");
 }
 
-void  offload_rbtree_load(int * i,struct rb_root * mytree , struct mynode ** nodes  , char * global_mtx)
+void  offload_rbtree_load(int * i,struct rb_root * mytree , struct mynode ** nodes , bool * my_mutex)
 {
 	
 	struct offload_struct  ofld_vranlc ;
@@ -99,7 +99,7 @@ void  offload_rbtree_load(int * i,struct rb_root * mytree , struct mynode ** nod
 
 	ofld_vranlc.args[1].location	= mytree;
 	ofld_vranlc.args[2].location	= nodes;
-	ofld_vranlc.args[3].location    = global_mtx;
+	ofld_vranlc.args[3].location	= my_mutex;
 
 	printf("Addresses are i is at %p , mytree is at %p and nodes is at %p",ofld_vranlc.args[0].location , ofld_vranlc.args[1].location ,  ofld_vranlc.args[2].location );
         ofld_vranlc.type = OFFLOAD_RBTREE;

@@ -26,6 +26,18 @@ struct mynode {
 
 struct rb_root mytree = RB_ROOT;
 
+char * global_lock;
+
+void MyLock(char *lock) {
+    while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1);
+}
+
+void MyUnlock(char * lock)
+{
+        __atomic_clear(lock,__ATOMIC_RELAXED);
+}
+
+
 struct mynode * my_search(struct rb_root *root, char *string)
 {
   	struct rb_node *node = root->rb_node;
@@ -75,21 +87,21 @@ void my_free(struct mynode *node)
 {
 	if (node != NULL) {
 		if (node->string != NULL) {
-//			free(node->string);
+			MyFree(node->string);
 			node->string = NULL;
 		}
-//		free(node);
+		MyFree(node);
 		node = NULL;
 	}
 }
 
 #define NUM_NODES 200
 
-int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode ** mn_in)
+int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode ** mn_in , char * glob_mtx)
 {
 
 	struct mynode **mn = (struct mynode **)mn_in;
-
+	global_lock = glob_mtx;
 	/* *insert */
 	int * i = counter;
 	printf("insert node from 1 to NUM_NODES(32): \n");
@@ -101,22 +113,27 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 		my_insert(mytree_in, mn[*i]);
 	}
 */
-
+	struct mynode *data = my_search(mytree_in, "10");
 	/* *delete again*/
         printf("delete node 10: \n");
-        data = my_search(mytree, "10");
+        data = my_search(mytree_in, "10");
         if (data) {
-                rb_erase(&data->node, mytree);
+		MyLock(global_lock); 
+               rb_erase(&data->node, mytree_in);
                 my_free(data);
+		MyUnlock(global_lock);
+		
         }
 
         /* *delete once again*/
         printf("delete node 15: \n");
-        data = my_search(mytree, "15");
+        data = my_search(mytree_in, "15");
         if (data) {
-                rb_erase(&data->node, mytree);
+		MyLock(global_lock);
+                rb_erase(&data->node, mytree_in);
                 my_free(data);
-        }
+        	MyUnlock(global_lock);
+	}
 	
 	/* *search */
 	struct rb_node *node;

@@ -10,7 +10,7 @@ extern int *  next_buf ;
 #define BASE_SHMEM 0x60000000
 #define SIZE_SHMEM 0x3F000000
 
-extern int kernel_rb_main(int * counter , void * mytree_in , struct mynode ** mn_in , char * glob_mtx);
+extern int kernel_rb_main(int * counter , void * mytree_in , struct mynode ** mn_in , bool * my_mutex);
 
 #define STACKSIZ ((8192 *2) + CONFIG_TEST_EXTRA_STACKSIZE)
 
@@ -141,6 +141,7 @@ void main()
 			printf("A request of type OFFLOAD_RBTREE came\n");
 			//do the work here
 		
+			*(uint32_t*)0x9f000000 = 0x1a2b3c4d;
 				
 			//indicate that you have consumed the message
 			*(uint32_t*)inp = ~(0xF00F0FF0);
@@ -148,8 +149,9 @@ void main()
 			//Start replying
 			int *  ij = (int *) inp->args[0].location;
 			struct rb_root* treeroot = (struct rb_root*)inp->args[1].location;
-			struct mynode ** mn =( struct mynode **)inp->args[2].location;				       char * glob_mtx = (char *)inp->args[2].location;
-			kernel_rb_main(ij , treeroot , mn , glob_mtx);
+			struct mynode ** mn =( struct mynode **)inp->args[2].location;		
+			bool * my_mutex = (bool *) inp->args[3].location; 
+			kernel_rb_main(ij , treeroot , mn , my_mutex);
 			
 
 				
