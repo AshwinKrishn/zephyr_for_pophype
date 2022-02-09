@@ -2,13 +2,13 @@
 #include<stddef.h>
 #include "mymalloc.h"
 
-char * memory_malloc = 0x60000000;
-struct block *freeList=(void*)0x60000000;
+char * memory_malloc = 0x70000000;
+struct block *freeList=(void*)0x70000000;
 
 static char status = 0;
 
 void malloc_initialize(){
- freeList->size=0x30000000-sizeof(struct block);
+ freeList->size=0x20000000-sizeof(struct block);
  freeList->free=1;
  freeList->next=NULL;
 }

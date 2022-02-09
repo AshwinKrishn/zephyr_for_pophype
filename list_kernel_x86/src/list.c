@@ -1,0 +1,61 @@
+#include "list.h"
+
+struct a_list
+{
+  struct list_head list;
+  const char* str;
+};
+
+static void append(struct a_list* ptr,const char* str, int val)           
+{
+  struct a_list* tmp;
+  tmp = (struct a_list*)MyMalloc(sizeof(struct a_list));
+  if(!tmp) {
+    perror("malloc");
+    exit(1);
+  }
+  tmp->str = str;
+  list_add_tail( &(tmp->list), &(ptr->list) );
+}
+
+  struct a_list *  blist;
+#define NUM_ENTRY 10000
+int list_main()
+{
+  struct a_list* iter; 
+  blist = (struct a_list*)MyMalloc(sizeof(struct a_list));
+  INIT_LIST_HEAD(&blist->list);
+  blist->str = (char *)MyMalloc(4* sizeof(char));
+  
+
+  for (int i = 0 ; i < NUM_ENTRY ; i++)
+  {
+	struct a_list* tmp;
+  	tmp = (struct a_list*)MyMalloc(sizeof(struct a_list));
+	tmp->str = (char *)MyMalloc(4* sizeof(char));
+	sprintf(tmp->str , "%x",i);
+	list_add_tail( &(tmp->list), &(blist->list) );		
+  }
+
+  iter = blist ; 
+  offload_list_load(blist);
+  int offset_blist = offsetof(struct a_list , list) ;
+  offload_list_load(blist ) ;
+  do
+  {
+			
+//	printf("%s \n", iter->str);
+//	printf("Last address allocated is %p\n",iter->str);
+	iter = iter->list.next - offset_blist ;  
+				
+  }while(iter != blist);
+
+  /* remove all items in the list */
+  while( !list_empty(&blist->list) ) {
+    iter = list_entry(blist->list.next,struct a_list,list);
+    list_del(&iter->list);
+    MyFree(iter);
+  }
+  
+  return 0;
+}

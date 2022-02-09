@@ -106,7 +106,7 @@ void  offload_rbtree_load(int * i,struct rb_root * mytree , struct mynode ** nod
 
         memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
         printf("Copied the sturct details for rbtree \n");
-//	wait_for_other_core();	
+	wait_for_other_core();	
 
 }
 int main() 

@@ -98,7 +98,7 @@ void my_free(struct mynode *node)
 	}
 }
 
-#define NUM_NODES 1600
+#define NUM_NODES 8000
 
 int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode ** mn_in , char * glob_mtx)
 {
@@ -116,7 +116,7 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	while(num_deletions < 500){
 	for(int l = 0 ; l < NUM_NODES ; l++){
 	MyLock(global_lock);
-		char text[4];
+		char text[8];
                 sprintf(text,"%x",l); 
 	        data = my_search(mytree_in, text);
 	        if (data) {
