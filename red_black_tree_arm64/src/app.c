@@ -10,6 +10,8 @@ extern int *  next_buf ;
 #define BASE_SHMEM 0x60000000
 #define SIZE_SHMEM 0x3F000000
 
+extern void malloc_initialize();
+
 extern int kernel_rb_main(int * counter , void * mytree_in , struct mynode ** mn_in , char * glob_mtx);
 
 #define STACKSIZ ((8192 *2) + CONFIG_TEST_EXTRA_STACKSIZE)
@@ -94,7 +96,7 @@ void main()
                 .present = 0xE00E0EE0,
         };
 	struct handshake in_hnsk;
-	
+//	malloc_initialize();	
 	memcpy(hnsk.arch, "ARM",4);
 	memcpy((void*)&in_hnsk,rw_buf.read_area,sizeof(struct shared_area)); 	
 	if(in_hnsk.present  == 0x1FF1F11F)

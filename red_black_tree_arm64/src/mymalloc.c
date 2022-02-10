@@ -2,8 +2,8 @@
 #include<stddef.h>
 #include "mymalloc.h"
 
-char * memory_malloc = 0x70000000;
-struct block *freeList=(void*)0x70000000;
+char * memory_malloc = 0x60000000;
+struct block *freeList=(void*)0x60000000;
 
 static char status = 0;
 

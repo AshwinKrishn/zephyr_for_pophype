@@ -113,8 +113,8 @@ int main()
 {
 
   printf("x86 kernel started\n");
-  rw_buf.write_area = (void*)0x50000000;
-  rw_buf.read_area  = (void*)0x5f000000;
+  rw_buf.write_area = (void*)0x90000000;
+  rw_buf.read_area  = (void*)0x9f000000;
   struct handshake hnsk = {
                 .present = 0x1FF1F11F,
         };

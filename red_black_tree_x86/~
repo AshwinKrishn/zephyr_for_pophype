@@ -135,13 +135,6 @@ int kernel_rb_main()
 	struct mynode *data ;
 		*i = 0;
 		number_entries = 0;
-	/* *search */
-	struct rb_node *node;
-	for (node = rb_first(mytree); node; node = rb_next(node)){
-                
-		number_entries++;
-		read_count++;
-        }
 	while(number_entries < NUM_NODES - 100)
 	{
 		printf("Whiling\n");
@@ -169,6 +162,8 @@ int kernel_rb_main()
 	}
 
 
+	/* *search */
+	struct rb_node *node;
 	
 	/* *search again*/
 	printf("search again:\n");
@@ -178,7 +173,6 @@ int kernel_rb_main()
 		remaining++;
 		read_count++;
 	}
-	printf("The read count is  %d and write count is  %d\n",read_count,write_count);
 	printf("remaining entries are %d\n",remaining);
 	return 0;
 }

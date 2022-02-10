@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <string.h>
 
+extern void malloc_initialize();
+
 struct mynode {
   	struct rb_node node;
   	char *string;
@@ -98,7 +100,9 @@ void my_free(struct mynode *node)
 	}
 }
 
-#define NUM_NODES 8000
+#define NUM_NODES 14000
+
+int write_count =0 , read_count =0;
 
 int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode ** mn_in , char * glob_mtx)
 {
@@ -114,17 +118,22 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	/* *delete again*/
 	static int num_deletions = 0;
 	while(num_deletions < 500){
-	for(int l = 0 ; l < NUM_NODES ; l++){
+	for(int l = 0 ; l < NUM_NODES/2 ; l++){
 	MyLock(global_lock);
 		char text[8];
-                sprintf(text,"%x",l); 
+                if(l == NUM_NODES - 103){
+			printf("Almost there\n");
+		}
+		sprintf(text,"%x",l); 
 	        data = my_search(mytree_in, text);
 	        if (data) {
                		rb_erase(&data->node, mytree_in);
 	        	printf("delete node %d: \n",l);
-//                	my_free(data);
-			num_deletions++;	
-			printf("Num deletions are %d\n",num_deletions);
+                	my_free(data);
+			num_deletions++;
+			mn[l] = NULL;
+			write_count++;	
+//			printf("Num deletions are %d\n",num_deletions);
         	}
 	MyUnlock(global_lock);
 	}
@@ -133,11 +142,14 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	/* *search */
 	struct rb_node *node;
 	printf("search all nodes: \n");
-	for (node = rb_first(mytree_in); node; node = rb_next(node))
+	for (node = rb_first(mytree_in); node; node = rb_next(node)){
 		printf("key = %s\n", rb_entry(node, struct mynode, node)->string);
+		read_count++;
+	}
 
 	*(uint32_t*)0x9f000000 = 0x1a2b3c4d;
 	printf("Leaving the RB tre fucntion\n");
+	printf("The read count is  %d and write count is  %d\n",read_count,write_count);
 	return 0;
 }
 
