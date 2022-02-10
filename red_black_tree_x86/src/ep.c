@@ -106,7 +106,7 @@ void  offload_rbtree_load(int * i,struct rb_root * mytree , struct mynode ** nod
 
         memcpy((void*)rw_buf.write_area , (void*)&ofld_vranlc , sizeof(struct offload_struct) );
         printf("Copied the sturct details for rbtree \n");
-	wait_for_other_core();	
+//	wait_for_other_core();	
 
 }
 int main() 
@@ -158,6 +158,7 @@ int main()
   gettimeofday(&tv,(void *)0);
   printf("Seconds recorded is %d \n\n",tv.tv_sec);
   kernel_rb_main();
+   wait_for_other_core();
   printf("Requesting the ARM kernel to shutdown\n");
   struct offload_struct shutdown;
   shutdown.new_request = 0xF00F0FF0;

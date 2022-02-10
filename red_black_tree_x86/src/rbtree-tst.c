@@ -117,7 +117,7 @@ int kernel_rb_main()
 	
 	*i = 0;
 	printf("insert node from 1 to %d: \n",NUM_NODES);
-	for (; *i < NUM_NODES - 100; (*i) += 1) {
+	for (; *i < NUM_NODES; (*i) += 1) {
 		MyLock(global_lock);
 		mn[*i] = (struct mynode *)MyMalloc(sizeof(struct mynode));
 		mn[*i]->string = (char *)MyMalloc(sizeof(char) * 8);
@@ -133,19 +133,21 @@ int kernel_rb_main()
 	
 	static int number_entries = 0;	
 	struct mynode *data ;
-		*i = 0;
+//		*i = 0;
 		number_entries = 0;
 	/* *search */
 	struct rb_node *node;
 	for (node = rb_first(mytree); node; node = rb_next(node)){
-                
+		printf("key = %s\n", rb_entry(node, struct mynode, node)->string);
 		number_entries++;
 		read_count++;
         }
-	while(number_entries < NUM_NODES - 100)
+        MyLock(global_lock);
+	*i=0; 
+	while(number_entries < NUM_NODES )
 	{
 		printf("Whiling\n");
-	 	for (; *i < NUM_NODES; (*i) += 1) {
+	 	for (; *i < 2*NUM_NODES; (*i) += 1) {
 			if(mn[*i] == NULL){
 				mn[*i] = (struct mynode *)MyMalloc(sizeof(struct mynode));
                 		mn[*i]->string = (char *)MyMalloc(sizeof(char) * 8);
@@ -157,10 +159,8 @@ int kernel_rb_main()
 			{
 				sprintf(mn[*i]->string, "%x", *i);
 				printf("%s not present \n",text);	
-				MyLock(global_lock);
 				my_insert(mytree, mn[*i]);
 				write_count++;
-				MyUnlock(global_lock);
 				number_entries++;
 				printf("num entries is %d\n",number_entries);
 				break;
@@ -168,7 +168,7 @@ int kernel_rb_main()
 		}
 	}
 
-
+	MyUnlock(global_lock);
 	
 	/* *search again*/
 	printf("search again:\n");

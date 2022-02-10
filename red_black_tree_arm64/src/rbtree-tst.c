@@ -33,7 +33,7 @@ char * global_lock;
 void MyLock(char *lock) {
     while (__atomic_test_and_set(lock,__ATOMIC_SEQ_CST) == 1)
 	{
-//		printf("waiting for lock\n");
+		printf("waiting for lock\n");
 	}
 }
 
@@ -117,13 +117,10 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 	struct mynode *data = my_search(mytree_in, "10");
 	/* *delete again*/
 	static int num_deletions = 0;
+	MyLock(global_lock);
 	while(num_deletions < 500){
 	for(int l = 0 ; l < NUM_NODES/2 ; l++){
-	MyLock(global_lock);
 		char text[8];
-                if(l == NUM_NODES - 103){
-			printf("Almost there\n");
-		}
 		sprintf(text,"%x",l); 
 	        data = my_search(mytree_in, text);
 	        if (data) {
@@ -135,10 +132,10 @@ int kernel_rb_main(int * counter , struct rb_root * mytree_in , struct mynode **
 			write_count++;	
 //			printf("Num deletions are %d\n",num_deletions);
         	}
-	MyUnlock(global_lock);
 	}
 	}
 	
+	MyUnlock(global_lock);
 	/* *search */
 	struct rb_node *node;
 	printf("search all nodes: \n");
